@@ -17,26 +17,52 @@ interface Text {
       isUnderline?:boolean,
       isStroked?:boolean,
     },
-    letterSpacing?: number,
+    letterSpacing?: {
+      value: number
+      unit: 'PIXELS' | 'PERCENT'
+    },
+    lineSpacing?: {
+      value: number
+      unit: 'PIXELS' | 'PERCENT' 
+    } 
+    | 
+    {
+      unit: 'AUTO'
+    },
+    blur?: number,
+    isLocked?: boolean,
+    opacity?: number,
+    rotation?: number,
+    alignX?: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
+    alignY?: "CENTER" | "TOP" | "BOTTOM" 
   }
 }
 
-// function rgbToHex(r: number, g: number, b: number): string {
-//   // Проверяем, что значения находятся в диапазоне от 0 до 255
-//   if ([r, g, b].some((value) => value < 0 || value > 255)) {
-//     throw new Error("Недопустимые значения RGB.");
-//   }
+function rgbToHex(r: number, g: number, b: number): string {
+  
+  // Приводим значение rgb из процентного в 8-битный
 
-//   // Преобразуем значения в шестнадцатеричный формат
-//   const hexR = r.toString(16).padStart(2, "0");
-//   const hexG = g.toString(16).padStart(2, "0");
-//   const hexB = b.toString(16).padStart(2, "0");
+  r = Math.ceil(r * 255)
+  g = Math.ceil(g * 255)
+  b = Math.ceil(b * 255)
+  
+  // Проверяем, что значения находятся в диапазоне от 0 до 255
 
-//   // Собираем шестнадцатеричный код цвета
-//   const hexColor = `#${hexR}${hexG}${hexB}`;
+  if ([r, g, b].some((value) => value < 0 || value > 255)) {
+    throw new Error("Недопустимые значения RGB.");
+  }
 
-//   return hexColor;
-// }
+
+  // Преобразуем значения в шестнадцатеричный формат
+  const hexR = r.toString(16).padStart(2, "0");
+  const hexG = g.toString(16).padStart(2, "0");
+  const hexB = b.toString(16).padStart(2, "0");
+
+  // Собираем шестнадцатеричный код цвета
+  const hexColor = `#${hexR}${hexG}${hexB}`;
+
+  return hexColor;
+}
 
 
 function getStyles() {
@@ -44,7 +70,22 @@ function getStyles() {
 
   
   const elem = selectedElem as TextNode;
-  const {characters:text, type, width, height, x, y, fontSize:size, fills, fontWeight:weight, fontName, letterSpacing:letSpace} = elem
+  let {characters:text, type, width, height, x, y, fontSize:size, fills, fontWeight:weight, fontName, letterSpacing:letSpace, lineHeight, effects, locked:isLocked, opacity, rotation, textAlignHorizontal:alignX, textAlignVertical:alignY} = elem
+
+
+
+  //
+  x = Number(x.toFixed(1))
+  y = Number(y.toFixed(1))
+
+  //blur
+  let blurProp:number = 0 
+
+  for(const item of effects) {
+    if (item.type === 'LAYER_BLUR') {
+      blurProp = item.radius
+    }
+  }
 
   // Font family & Style
   const fontProp = fontName as FontName
@@ -53,8 +94,7 @@ function getStyles() {
   
   // Letter Spacing
   const spacingProp = letSpace as LetterSpacing
-  const letterSpacing = spacingProp.value
-  
+  const lineHeightProp = lineHeight as LineHeight
   
 
 
@@ -90,13 +130,17 @@ function getStyles() {
         name,
         style
       },
-      letterSpacing,
-
+      letterSpacing: spacingProp,
+      lineSpacing: lineHeightProp,
+      blur: blurProp,
+      isLocked,
+      opacity,
+      rotation,
     }
   }
   
 
-  console.log()
+  console.log(fills)
 
   figma.closePlugin();
 }
