@@ -1,27 +1,27 @@
 interface Text {
-  type?: string,
-  text?: string,
-  size?: {
-    width?: number,
-    height?: number,
-    x?: number,
-    y?: number,
+  type: string,
+  text: string,
+  size: {
+    width: number,
+    height: number,
+    x: number,
+    y: number,
   },
-  style?: {
-    font?: {
-      name?: string,
-      style?: string,
-      size?: number | symbol,
-      color?: string,
-      weight?: number | symbol,
-      isUnderline?:boolean,
-      isStroked?:boolean,
+  style: {
+    font: {
+      name: string,
+      style: string,
+      size: number | symbol,
+      color: string,
+      weight: number | symbol,
+      isUnderline:boolean,
+      isStroked:boolean,
     },
-    letterSpacing?: {
+    letterSpacing: {
       value: number
       unit: 'PIXELS' | 'PERCENT'
     },
-    lineSpacing?: {
+    lineSpacing: {
       value: number
       unit: 'PIXELS' | 'PERCENT' 
     } 
@@ -34,7 +34,20 @@ interface Text {
     opacity?: number,
     rotation?: number,
     alignX?: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
-    alignY?: "CENTER" | "TOP" | "BOTTOM" 
+    alignY?: "CENTER" | "TOP" | "BOTTOM",
+    color?: string
+  }
+
+}
+
+interface Frame {
+  type: string,
+  filename: string,
+  size: {
+    width: number,
+    height: number,
+    x: number,
+    y: number,
   }
 }
 
@@ -68,79 +81,13 @@ function rgbToHex(r: number, g: number, b: number): string {
 function getStyles() {
   const selectedElem = figma.currentPage.selection[0]
 
-  
-  const elem = selectedElem as TextNode;
-  let {characters:text, type, width, height, x, y, fontSize:size, fills, fontWeight:weight, fontName, letterSpacing:letSpace, lineHeight, effects, locked:isLocked, opacity, rotation, textAlignHorizontal:alignX, textAlignVertical:alignY} = elem
+  const group = selectedElem as FrameNode
+  let {width, height, x, y, effects, name, backgrounds, strokes} = group
 
+  // const rectangle = selectedElem as RectangleNode
+  // let {fills, width, height, x, y, strokes, effects, name} = rectangle
 
-
-  //
-  x = Number(x.toFixed(1))
-  y = Number(y.toFixed(1))
-
-  //blur
-  let blurProp:number = 0 
-
-  for(const item of effects) {
-    if (item.type === 'LAYER_BLUR') {
-      blurProp = item.radius
-    }
-  }
-
-  // Font family & Style
-  const fontProp = fontName as FontName
-  const name = fontProp.family
-  const style = fontProp.style
-  
-  // Letter Spacing
-  const spacingProp = letSpace as LetterSpacing
-  const lineHeightProp = lineHeight as LineHeight
-  
-
-
-// Проверка text decoration
-  let isUnderline:boolean = false
-  let isStroked:boolean = false
-
-  if(elem.textDecoration === 'STRIKETHROUGH') {
-    isUnderline = false
-    isStroked = false
-  }
-
-  if(elem.textDecoration === 'UNDERLINE') {
-    isUnderline = true
-    isStroked = false
-  }
-
-  const textInfo: Text = {
-    text,
-    type,
-    size: {
-      width,
-      height,
-      x,
-      y,
-    },
-    style: {
-      font: {
-        size,
-        weight,
-        isStroked,
-        isUnderline,
-        name,
-        style
-      },
-      letterSpacing: spacingProp,
-      lineSpacing: lineHeightProp,
-      blur: blurProp,
-      isLocked,
-      opacity,
-      rotation,
-    }
-  }
-  
-
-  console.log(fills)
+  console.log(backgrounds, effects, strokes)
 
   figma.closePlugin();
 }

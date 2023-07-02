@@ -18,63 +18,11 @@ function rgbToHex(r, g, b) {
 }
 function getStyles() {
     const selectedElem = figma.currentPage.selection[0];
-    const elem = selectedElem;
-    let { characters: text, type, width, height, x, y, fontSize: size, fills, fontWeight: weight, fontName, letterSpacing: letSpace, lineHeight, effects, locked: isLocked, opacity, rotation, textAlignHorizontal: alignX, textAlignVertical: alignY } = elem;
-    //
-    x = Number(x.toFixed(1));
-    y = Number(y.toFixed(1));
-    //blur
-    let blurProp = 0;
-    for (const item of effects) {
-        if (item.type === 'LAYER_BLUR') {
-            blurProp = item.radius;
-        }
-    }
-    // Font family & Style
-    const fontProp = fontName;
-    const name = fontProp.family;
-    const style = fontProp.style;
-    // Letter Spacing
-    const spacingProp = letSpace;
-    const lineHeightProp = lineHeight;
-    // Проверка text decoration
-    let isUnderline = false;
-    let isStroked = false;
-    if (elem.textDecoration === 'STRIKETHROUGH') {
-        isUnderline = false;
-        isStroked = false;
-    }
-    if (elem.textDecoration === 'UNDERLINE') {
-        isUnderline = true;
-        isStroked = false;
-    }
-    const textInfo = {
-        text,
-        type,
-        size: {
-            width,
-            height,
-            x,
-            y,
-        },
-        style: {
-            font: {
-                size,
-                weight,
-                isStroked,
-                isUnderline,
-                name,
-                style
-            },
-            letterSpacing: spacingProp,
-            lineSpacing: lineHeightProp,
-            blur: blurProp,
-            isLocked,
-            opacity,
-            rotation,
-        }
-    };
-    console.log(fills);
+    const group = selectedElem;
+    let { width, height, x, y, effects, name, backgrounds, strokes } = group;
+    // const rectangle = selectedElem as RectangleNode
+    // let {fills, width, height, x, y, strokes, effects, name} = rectangle
+    console.log(backgrounds, effects, strokes);
     figma.closePlugin();
 }
 getStyles();
