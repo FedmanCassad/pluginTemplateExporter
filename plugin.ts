@@ -1,4 +1,3 @@
-
 interface Text {
   type: string,
   text: string,
@@ -9,14 +8,14 @@ interface Text {
     y: number,
   },
   style: {
-    font: {
-      name: string,
-      style: string,
-      size: number | symbol,
-      color: string,
-      weight: number | symbol,
-      isUnderline:boolean,
-      isStroked:boolean,
+    font?: {
+      name?: string,
+      style?: string,
+      size?: number | symbol,
+      color?: string,
+      weight?: number | symbol,
+      isUnderline?:boolean,
+      isStroked?:boolean,
     },
     letterSpacing: {
       value: number
@@ -95,21 +94,6 @@ function correctionName (name:string) {
   return name.split(' ').join('');
 }
 
-
-
-async function getStyles() {
-  
-  const select = figma.currentPage.selection[0] as FrameNode
-
-  if(select && select.type === 'FRAME' && select.children) {
-    const children = select.children
-
-  }
-  
-
-  figma.closePlugin();
-}
-
 async function sendPostRequest(url: string, data: object): Promise<any> {
   try {
     const response = await fetch(url, {
@@ -131,9 +115,8 @@ async function sendPostRequest(url: string, data: object): Promise<any> {
   }
 }
 
-async function exportObject() {
-  const node = figma.currentPage.selection[0]; // выбирается объект для экспорта
-  const exportOptions:ExportSettings = { format: 'PNG'}; // указываются параметры экспорта
+async function exportObject(node:SceneNode) {
+  const exportOptions:ExportSettings = { format: 'SVG'}; // указываются параметры экспорта
   const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
   const exportData = {
     size: {
@@ -145,11 +128,199 @@ async function exportObject() {
   }
   
   // обработка данных экспорта
-  // await sendPostRequest('https://logo.finanse.space/api/uploadEncoded', exportData)
-  
-  console.log(exportData);
+  const response = await sendPostRequest('https://logo.finanse.space/api/uploadEncoded', exportData)
+
+  return response.url
+  // console.log(exportData);
 }
 
-// exportObject();
+async function getStyles() {
+  
+  const selected = figma.currentPage.selection
+  
+  if(selected.length > 1) {
+    figma.closePlugin('Выберите один элемент.')
+  }
 
-getStyles();
+  if(selected.length === 0) {
+    figma.closePlugin('Выделите фрейм логотипа.')
+  }
+
+  const select = selected[0]  
+
+  if(select && select.type === 'FRAME' && select.children) {
+    let layouts:(Text | Frame)[] = []
+    
+    const children = select.children
+    
+    for (const child of children) {
+      if(child.type ==="TEXT") {
+        const elem:TextNode = child as TextNode
+        let { characters: text, type, width, height, x, y, fontSize: size, fills, fontWeight: weight, fontName, letterSpacing: letSpace, lineHeight, effects, locked: isLocked, opacity, rotation, textAlignHorizontal: alignX, textAlignVertical: alignY } = elem;
+
+        
+        const colorProp = fills as Paint[];
+        let fontColor:string = ''
+
+        if(colorProp[0].type === 'SOLID' && colorProp[0].color) {
+          fontColor = rgbToHex(colorProp[0].color.r, colorProp[0].color.g, colorProp[0].color.b)
+        }
+        
+        x = Number(x.toFixed(1));
+        y = Number(y.toFixed(1));
+        //blur
+        let blurProp = 0;
+        for (const item of effects) {
+            if (item.type === 'LAYER_BLUR') {
+                blurProp = item.radius;
+            }
+        }
+        // Font family & Style
+        const fontProp = fontName as FontName;
+        const name = fontProp.family;
+        const style = fontProp.style;
+        // Letter Spacing
+        const spacingProp = letSpace as LetterSpacing;
+        const lineHeightProp = lineHeight as LineHeight;
+        // Проверка text decoration
+
+        let isUnderline:boolean = false
+        let isStroked: boolean = false
+
+        if (elem.textDecoration === 'STRIKETHROUGH') {
+            isUnderline = false;
+            isStroked = true;
+        }
+        if (elem.textDecoration === 'UNDERLINE') {
+          isUnderline = true;
+          isStroked = false;
+        }
+        
+        let textInfo:Text = {
+          text,
+          type,
+          size: {
+              width,
+              height,
+              x,
+              y,
+          },
+          style: {
+              font: {
+                  size,
+                  weight,
+                  isStroked,
+                  isUnderline,
+                  name,
+                  style
+              },
+              letterSpacing: spacingProp,
+              lineSpacing: lineHeightProp,
+              blur: blurProp,
+              isLocked,
+              opacity,
+              rotation,
+          }
+        }
+        layouts.push(textInfo)
+        };
+
+        if(child.type ==='FRAME') {
+          const elem:FrameNode= child as FrameNode;
+
+          let {width, height, x, y, effects, name, backgrounds, strokes, type, strokeWeight} = elem
+  
+          let colorStrokes: string = ''
+          let borderStyle: string = ''
+        
+          strokes.forEach((paint:Paint) => {
+            if (paint.type === "SOLID") {
+              const solidPaint: SolidPaint = paint as SolidPaint
+              colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
+              borderStyle = solidPaint.type
+        
+            }
+          })
+        
+          let shadowColor: string = ''
+          let shadowOpacity: number = 0
+          let offsetX: number = 0;
+          let offsetY: number = 0;
+          let shadowType: string = '';
+          
+          
+          effects.forEach((effect:Effect) => {
+            if(effect.type === 'DROP_SHADOW') {
+              const dropShadow: DropShadowEffect = effect as DropShadowEffect
+              shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b)
+              shadowOpacity = Math.ceil(dropShadow.color.a * 100)
+              offsetX = dropShadow.offset.x
+              offsetY = dropShadow.offset.y
+            }
+          })
+          
+          const imageUrl:string = await exportObject(elem)
+
+          const groupProp:Frame = {
+            type,
+            filename: imageUrl,
+            size: {
+              width,
+              height,
+              x,
+              y
+            },
+            style: {
+              border: {
+                color: colorStrokes, 
+                style: borderStyle,
+                weight: strokeWeight,
+              },
+              shadow: {
+                color: shadowColor,
+                opacity: shadowOpacity,
+                offsetX,
+                offsetY,
+              }
+            }
+          }
+          layouts.push(groupProp)
+        }
+      }
+      console.log(layouts);
+    }
+    figma.closePlugin();
+  }
+
+
+
+
+// function saveFile() {
+//   if (figma.command == 'save') {
+//     // Проверяем, что плагин был запущен с командой "save"
+    
+//     const options = {
+//       title: "Сохранить файл",
+//       buttonLabel: "Сохранить",
+//       filters: [
+//         { name: "JSON", extensions: ["json"] },
+//         { name: "All Files", extensions: ["*"] }
+//       ]
+//     };
+
+//     // Вызываем диалоговое окно сохранения
+//     const filePaths = showSaveDialog(options);
+
+//     // Если пользователь выбрал файл и нажал кнопку "Сохранить"
+//     if (filePaths && filePaths.length > 0) {
+//       const filePath = filePaths[0];
+//       // Выполняем сохранение файла по выбранному пути
+//       // ...
+//     }
+//   }
+// }
+
+// saveFile();
+
+
+getStyles()
