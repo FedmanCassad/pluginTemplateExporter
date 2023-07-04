@@ -1,3 +1,4 @@
+
 interface Text {
   type: string,
   text: string,
@@ -41,13 +42,26 @@ interface Text {
 }
 
 interface Frame {
-  type: string,
-  filename: string,
-  size: {
-    width: number,
-    height: number,
-    x: number,
-    y: number,
+  type?: string,
+  filename?: string,
+  size?: {
+    width?: number,
+    height?: number,
+    x?: number,
+    y?: number,
+  }
+  style?: {
+    border?: {
+      weight: number | symbol,
+      color?: string,
+      style?: string
+    },
+    shadow?: {
+      color?: string,
+      offsetX?: number,
+      offsetY?: number,
+      opacity?: number,
+    }
   }
 }
 
@@ -77,20 +91,65 @@ function rgbToHex(r: number, g: number, b: number): string {
   return hexColor;
 }
 
+function correctionName (name:string) {  
+  return name.split(' ').join('');
+}
 
-function getStyles() {
-  const selectedElem = figma.currentPage.selection[0]
 
-  const group = selectedElem as FrameNode
-  let {width, height, x, y, effects, name, backgrounds, strokes} = group
 
-  // const rectangle = selectedElem as RectangleNode
-  // let {fills, width, height, x, y, strokes, effects, name} = rectangle
+async function getStyles() {
+  
+  const select = figma.currentPage.selection[0] as FrameNode
 
-  console.log(backgrounds, effects, strokes)
+  if(select && select.type === 'FRAME' && select.children) {
+    const children = select.children
+
+  }
+  
 
   figma.closePlugin();
 }
 
+async function sendPostRequest(url: string, data: object): Promise<any> {
+  try {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(data)
+    });
+    
+    if (!response.ok) {
+      throw new Error(`Ошибка HTTP: ${response.status}`);
+    }
+    
+    return response.json();
+  } catch (error) {
+    console.error('Ошибка при выполнении POST-запроса:', error);
+    throw error;
+  }
+}
+
+async function exportObject() {
+  const node = figma.currentPage.selection[0]; // выбирается объект для экспорта
+  const exportOptions:ExportSettings = { format: 'PNG'}; // указываются параметры экспорта
+  const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
+  const exportData = {
+    size: {
+      width: node.width,
+      height: node.height,
+      format: exportOptions.format
+    },
+    imageData: imageData
+  }
+  
+  // обработка данных экспорта
+  // await sendPostRequest('https://logo.finanse.space/api/uploadEncoded', exportData)
+  
+  console.log(exportData);
+}
+
+// exportObject();
 
 getStyles();
