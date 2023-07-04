@@ -64,6 +64,40 @@ interface Frame {
   }
 }
 
+interface Rectangle {
+  type?: string,
+  filename?: string,
+  size?: {
+    width?: number,
+    height?: number,
+    x?: number,
+    y?: number,
+  }
+  background?: {
+    url?: string,
+    color?: string,
+    gradient?: {
+      firstColor: string,
+      firstColorX: number,
+      secondColor: string,
+      firstColorY: number
+    } 
+  }
+  style?: {
+    border?: {
+      weight: number | symbol,
+      color?: string,
+      style?: string
+    },
+    shadow?: {
+      color?: string,
+      offsetX?: number,
+      offsetY?: number,
+      opacity?: number,
+    }
+  }
+}
+
 function rgbToHex(r: number, g: number, b: number): string {
   
   // Приводим значение rgb из процентного в 8-битный
@@ -116,7 +150,7 @@ async function sendPostRequest(url: string, data: object): Promise<any> {
 }
 
 async function exportObject(node:SceneNode) {
-  const exportOptions:ExportSettings = { format: 'SVG'}; // указываются параметры экспорта
+  const exportOptions:ExportSettings = { format: 'PNG'}; // указываются параметры экспорта
   const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
   const exportData = {
     size: {
@@ -286,11 +320,80 @@ async function getStyles() {
           }
           layouts.push(groupProp)
         }
+      if(child.type === "RECTANGLE") {
+        const elem:RectangleNode = child as RectangleNode
+
+        let {width, height, x, y, effects, name, fills, strokes, type, strokeWeight} = elem
+        let colorStrokes: string = ''
+        let borderStyle: string = ''
+      
+        strokes.forEach((paint:Paint) => {
+          if (paint.type === "SOLID") {
+            const solidPaint: SolidPaint = paint as SolidPaint
+            colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
+            borderStyle = solidPaint.type
+      
+          }
+        })
+      
+        let shadowColor: string = ''
+        let shadowOpacity: number = 0
+        let offsetX: number = 0;
+        let offsetY: number = 0;
+        let shadowType: string = '';
+        let imageUrl:string = ''
+        
+        effects.forEach((effect:Effect) => {
+          if(effect.type === 'DROP_SHADOW') {
+            const dropShadow: DropShadowEffect = effect as DropShadowEffect
+            shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b)
+            shadowOpacity = Math.ceil(dropShadow.color.a * 100)
+            offsetX = dropShadow.offset.x
+            offsetY = dropShadow.offset.y
+          }
+        })
+        
+        const fillProp:Paint[] = fills as Paint[] 
+        for(const fill of fillProp) {
+          if(fill.type === 'IMAGE') {
+            imageUrl = await exportObject(elem)
+          }
+        }
+
+        const rectangleNode:Rectangle = {
+          type,
+          filename: imageUrl,
+          size: {
+            width,
+            height,
+            x,
+            y
+          },
+          background: {
+            url: imageUrl,
+          },
+          style: {
+            border: {
+              color: colorStrokes, 
+              style: borderStyle,
+              weight: strokeWeight,
+            },
+            shadow: {
+              color: shadowColor,
+              opacity: shadowOpacity,
+              offsetX,
+              offsetY,
+            }
+          }
+        }
+        layouts.push(rectangleNode)
       }
-      console.log(layouts);
     }
-    figma.closePlugin();
+      
+    console.log(layouts);
   }
+  figma.closePlugin();
+}
 
 
 

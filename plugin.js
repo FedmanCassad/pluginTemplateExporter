@@ -39,7 +39,7 @@ async function sendPostRequest(url, data) {
     }
 }
 async function exportObject(node) {
-    const exportOptions = { format: 'SVG' }; // указываются параметры экспорта
+    const exportOptions = { format: 'PNG' }; // указываются параметры экспорта
     const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
     const exportData = {
         size: {
@@ -182,6 +182,67 @@ async function getStyles() {
                     }
                 };
                 layouts.push(groupProp);
+            }
+            if (child.type === "RECTANGLE") {
+                const elem = child;
+                let { width, height, x, y, effects, name, fills, strokes, type, strokeWeight } = elem;
+                let colorStrokes = '';
+                let borderStyle = '';
+                strokes.forEach((paint) => {
+                    if (paint.type === "SOLID") {
+                        const solidPaint = paint;
+                        colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b);
+                        borderStyle = solidPaint.type;
+                    }
+                });
+                let shadowColor = '';
+                let shadowOpacity = 0;
+                let offsetX = 0;
+                let offsetY = 0;
+                let shadowType = '';
+                let imageUrl = '';
+                effects.forEach((effect) => {
+                    if (effect.type === 'DROP_SHADOW') {
+                        const dropShadow = effect;
+                        shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b);
+                        shadowOpacity = Math.ceil(dropShadow.color.a * 100);
+                        offsetX = dropShadow.offset.x;
+                        offsetY = dropShadow.offset.y;
+                    }
+                });
+                const fillProp = fills;
+                for (const fill of fillProp) {
+                    if (fill.type === 'IMAGE') {
+                        imageUrl = await exportObject(elem);
+                    }
+                }
+                const rectangleNode = {
+                    type,
+                    filename: imageUrl,
+                    size: {
+                        width,
+                        height,
+                        x,
+                        y
+                    },
+                    background: {
+                        url: imageUrl,
+                    },
+                    style: {
+                        border: {
+                            color: colorStrokes,
+                            style: borderStyle,
+                            weight: strokeWeight,
+                        },
+                        shadow: {
+                            color: shadowColor,
+                            opacity: shadowOpacity,
+                            offsetX,
+                            offsetY,
+                        }
+                    }
+                };
+                layouts.push(rectangleNode);
             }
         }
         console.log(layouts);
