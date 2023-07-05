@@ -42,8 +42,8 @@ async function sendPostRequest(url, data) {
     }
 }
 // Функция эскпорта изображений (зависит от названия в узле 'img'/ 'vector')
-async function exportObject(node) {
-    const exportOptions = { format: 'PNG' }; // указываются параметры экспорта
+async function exportObject(node, exportType) {
+    const exportOptions = { format: exportType }; // указываются параметры экспорта
     const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
     const exportData = {
         size: {
@@ -153,7 +153,7 @@ async function getStyles(select) {
                         offsetY = dropShadow.offset.y;
                     }
                 });
-                const imageUrl = await exportObject(elem);
+                const imageUrl = await exportObject(elem, "SVG");
                 const groupProp = {
                     type,
                     filename: imageUrl,
@@ -208,8 +208,12 @@ async function getStyles(select) {
                 });
                 const fillProp = fills;
                 for (const fill of fillProp) {
-                    if (fill.type === 'IMAGE') {
-                        imageUrl = await exportObject(elem);
+                    // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
+                    if (fill.type === "IMAGE" && child.name.includes('img')) {
+                        imageUrl = await exportObject(elem, "PNG");
+                    }
+                    else if (child.name.includes('vector')) {
+                        imageUrl = await exportObject(elem, "SVG");
                     }
                 }
                 const rectangleNode = {

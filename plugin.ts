@@ -155,8 +155,8 @@ async function sendPostRequest(url: string, data: object): Promise<any> {
 }
 
 // Функция эскпорта изображений (зависит от названия в узле 'img'/ 'vector')
-async function exportObject(node:SceneNode) {
-  const exportOptions:ExportSettings = { format: 'PNG'}; // указываются параметры экспорта
+async function exportObject(node:SceneNode, exportType: "PNG" | "SVG") {
+  const exportOptions:ExportSettings = { format: exportType}; // указываются параметры экспорта
   const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
   const exportData = {
     size: {
@@ -266,7 +266,7 @@ async function getStyles(select:SceneNode) {
               const solidPaint = paint as SolidPaint
               colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
               borderStyle = solidPaint.type
-        
+              
             }
           })
         
@@ -287,7 +287,7 @@ async function getStyles(select:SceneNode) {
             }
           })
           
-          const imageUrl:string = await exportObject(elem)
+          const imageUrl:string = await exportObject(elem, "SVG")
 
           const groupProp:Frame = {
             type,
@@ -349,8 +349,12 @@ async function getStyles(select:SceneNode) {
         
         const fillProp = fills as Paint[] 
         for(const fill of fillProp) {
-          if(fill.type === 'IMAGE') {
-            imageUrl = await exportObject(elem)
+          // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
+          if(fill.type === "IMAGE" && child.name.includes('img')) {
+            imageUrl = await exportObject(elem, "PNG")
+          }
+          else if (child.name.includes('vector')) {
+            imageUrl = await exportObject(elem, "SVG")
           }
         }
 
