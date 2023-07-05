@@ -1,4 +1,5 @@
 "use strict";
+// Функция переводит цвета из rgb в hex
 function rgbToHex(r, g, b) {
     // Приводим значение rgb из процентного в 8-битный
     r = Math.ceil(r * 255);
@@ -16,9 +17,11 @@ function rgbToHex(r, g, b) {
     const hexColor = `#${hexR}${hexG}${hexB}`;
     return hexColor;
 }
+//Склеивание имени для узлов
 function correctionName(name) {
     return name.split(' ').join('');
 }
+// Функция запроса конечной ссылки для изображения
 async function sendPostRequest(url, data) {
     try {
         const response = await fetch(url, {
@@ -38,6 +41,7 @@ async function sendPostRequest(url, data) {
         throw error;
     }
 }
+// Функция эскпорта изображений (зависит от названия в узле 'img'/ 'vector')
 async function exportObject(node) {
     const exportOptions = { format: 'PNG' }; // указываются параметры экспорта
     const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
@@ -52,18 +56,9 @@ async function exportObject(node) {
     // обработка данных экспорта
     const response = await sendPostRequest('https://logo.finanse.space/api/uploadEncoded', exportData);
     return response.url;
-    // console.log(exportData);
 }
-async function getStyles() {
-    const selected = figma.currentPage.selection;
-    if (selected.length > 1) {
-        figma.closePlugin('Выберите один элемент.');
-    }
-    if (selected.length === 0) {
-        figma.closePlugin('Выделите фрейм логотипа.');
-    }
-    const select = selected[0];
-    if (select && select.type === 'FRAME' && select.children) {
+async function getStyles(select) {
+    if (select && select.type === 'FRAME' && select.children && select.name.includes('logo')) {
         let layouts = [];
         const children = select.children;
         const frameName = select.name;
@@ -246,41 +241,26 @@ async function getStyles() {
                 layouts.push(rectangleNode);
             }
         }
-        console.log(layouts);
+        return {
+            frameName,
+            layouts
+        };
     }
+    /// Если выбранный node элемент не содержит слово "logo" и не является FrameNode, пропускаем его  
+    return;
 }
+// Основная функция, которая запускается при запуске плагина
 async function Flow() {
-    const data = await getStyles();
-    const options = {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json'
-        },
-        body: JSON.stringify(data)
-    };
-    fetch('', options);
+    const selectedNodes = figma.currentPage.selection;
+    let exitData = [];
+    for (const node of selectedNodes) {
+        // Получаем стили для всех выделенных объектов
+        const logoData = await getStyles(node);
+        exitData.push(logoData);
+    }
+    // Отправляем готовый датасет на сервер 
+    console.log(exitData);
 }
-// function saveFile() {
-//   if (figma.command == 'save') {
-//     // Проверяем, что плагин был запущен с командой "save"
-//     const options = {
-//       title: "Сохранить файл",
-//       buttonLabel: "Сохранить",
-//       filters: [
-//         { name: "JSON", extensions: ["json"] },
-//         { name: "All Files", extensions: ["*"] }
-//       ]
-//     };
-//     // Вызываем диалоговое окно сохранения
-//     const filePaths = showSaveDialog(options);
-//     // Если пользователь выбрал файл и нажал кнопку "Сохранить"
-//     if (filePaths && filePaths.length > 0) {
-//       const filePath = filePaths[0];
-//       // Выполняем сохранение файла по выбранному пути
-//       // ...
-//     }
-//   }
-// }
-// saveFile();
-// figma.showUI(__html__)
-getStyles();
+//Запускаемые скрипты
+Flow();
+// getStyles()

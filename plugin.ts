@@ -98,6 +98,8 @@ interface Rectangle {
   }
 }
 
+
+// Функция переводит цвета из rgb в hex
 function rgbToHex(r: number, g: number, b: number): string {
   
   // Приводим значение rgb из процентного в 8-битный
@@ -124,10 +126,13 @@ function rgbToHex(r: number, g: number, b: number): string {
   return hexColor;
 }
 
+//Склеивание имени для узлов
+
 function correctionName (name:string) {  
   return name.split(' ').join('');
 }
 
+// Функция запроса конечной ссылки для изображения
 async function sendPostRequest(url: string, data: object): Promise<any> {
   try {
     const response = await fetch(url, {
@@ -149,6 +154,7 @@ async function sendPostRequest(url: string, data: object): Promise<any> {
   }
 }
 
+// Функция эскпорта изображений (зависит от названия в узле 'img'/ 'vector')
 async function exportObject(node:SceneNode) {
   const exportOptions:ExportSettings = { format: 'PNG'}; // указываются параметры экспорта
   const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
@@ -165,157 +171,93 @@ async function exportObject(node:SceneNode) {
   const response = await sendPostRequest('https://logo.finanse.space/api/uploadEncoded', exportData)
 
   return response.url
-  // console.log(exportData);
 }
 
-async function getStyles() {
-  
-  const selected = figma.currentPage.selection
-  
-  for(const select of selected) {
-    if(select && select.type === 'FRAME' && select.children) {
-      let layouts:(Text | Frame | Rectangle)[] = []
-      
-      const children = select.children
-      const frameName = select.name 
-  
-      for (const child of children) {
-        if(child.type ==="TEXT") {
-          const elem = child as TextNode
-          let { characters: text, type, width, height, x, y, fontSize: size, fills, fontWeight: weight, fontName, letterSpacing: letSpace, lineHeight, effects, locked: isLocked, opacity, rotation, textAlignHorizontal: alignX, textAlignVertical: alignY } = elem;
-  
-          
-          const colorProp = fills as Paint[];
-          let fontColor:string = ''
-  
-          if(colorProp[0].type === 'SOLID' && colorProp[0].color) {
-            fontColor = rgbToHex(colorProp[0].color.r, colorProp[0].color.g, colorProp[0].color.b)
-          }
-          
-          x = Number(x.toFixed(1));
-          y = Number(y.toFixed(1));
-          //blur
-          let blurProp = 0;
-          for (const item of effects) {
-              if (item.type === 'LAYER_BLUR') {
-                  blurProp = item.radius;
-              }
-          }
-          // Font family & Style
-          const fontProp = fontName as FontName;
-          const name = fontProp.family;
-          const style = fontProp.style;
-          // Letter Spacing
-          const spacingProp = letSpace as LetterSpacing;
-          const lineHeightProp = lineHeight as LineHeight;
-          // Проверка text decoration
-  
-          let isUnderline:boolean = false
-          let isStroked: boolean = false
-  
-          if (elem.textDecoration === 'STRIKETHROUGH') {
-              isUnderline = false;
-              isStroked = true;
-          }
-          if (elem.textDecoration === 'UNDERLINE') {
-            isUnderline = true;
-            isStroked = false;
-          }
-          
-          let textInfo:Text = {
-            text,
-            type,
-            size: {
-                width,
-                height,
-                x,
-                y,
-            },
-            style: {
-                font: {
-                    size,
-                    weight,
-                    isStroked,
-                    isUnderline,
-                    name,
-                    style
-                },
-                letterSpacing: spacingProp,
-                lineSpacing: lineHeightProp,
-                blur: blurProp,
-                isLocked,
-                opacity,
-                rotation,
-            }
-          }
-          layouts.push(textInfo)
-          };
-  
-          if(child.type ==='FRAME') {
-            const elem = child as FrameNode;
-  
-            let {width, height, x, y, effects, name, backgrounds, strokes, type, strokeWeight} = elem
+async function getStyles(select:SceneNode) {
+
+  if(select && select.type === 'FRAME' && select.children && select.name.includes('logo')) {
+    let layouts:(Text | Frame | Rectangle)[] = []
     
-            let colorStrokes: string = ''
-            let borderStyle: string = ''
-          
-            strokes.forEach((paint:Paint) => {
-              if (paint.type === "SOLID") {
-                const solidPaint = paint as SolidPaint
-                colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
-                borderStyle = solidPaint.type
-          
-              }
-            })
-          
-            let shadowColor: string = ''
-            let shadowOpacity: number = 0
-            let offsetX: number = 0;
-            let offsetY: number = 0;
-            let shadowType: string = '';
-            
-            
-            effects.forEach((effect:Effect) => {
-              if(effect.type === 'DROP_SHADOW') {
-                const dropShadow = effect as DropShadowEffect
-                shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b)
-                shadowOpacity = Math.ceil(dropShadow.color.a * 100)
-                offsetX = dropShadow.offset.x
-                offsetY = dropShadow.offset.y
-              }
-            })
-            
-            const imageUrl:string = await exportObject(elem)
-  
-            const groupProp:Frame = {
-              type,
-              filename: imageUrl,
-              size: {
-                width,
-                height,
-                x,
-                y
-              },
-              style: {
-                border: {
-                  color: colorStrokes, 
-                  style: borderStyle,
-                  weight: strokeWeight,
-                },
-                shadow: {
-                  color: shadowColor,
-                  opacity: shadowOpacity,
-                  offsetX,
-                  offsetY,
-                }
-              }
+    const children = select.children
+    const frameName = select.name
+
+    for (const child of children) {
+      if(child.type ==="TEXT") {
+        const elem = child as TextNode
+        let { characters: text, type, width, height, x, y, fontSize: size, fills, fontWeight: weight, fontName, letterSpacing: letSpace, lineHeight, effects, locked: isLocked, opacity, rotation, textAlignHorizontal: alignX, textAlignVertical: alignY } = elem;
+
+        
+        const colorProp = fills as Paint[];
+        let fontColor:string = ''
+
+        if(colorProp[0].type === 'SOLID' && colorProp[0].color) {
+          fontColor = rgbToHex(colorProp[0].color.r, colorProp[0].color.g, colorProp[0].color.b)
+        }
+        
+        x = Number(x.toFixed(1));
+        y = Number(y.toFixed(1));
+        //blur
+        let blurProp = 0;
+        for (const item of effects) {
+            if (item.type === 'LAYER_BLUR') {
+                blurProp = item.radius;
             }
-            layouts.push(groupProp)
+        }
+        // Font family & Style
+        const fontProp = fontName as FontName;
+        const name = fontProp.family;
+        const style = fontProp.style;
+        // Letter Spacing
+        const spacingProp = letSpace as LetterSpacing;
+        const lineHeightProp = lineHeight as LineHeight;
+        // Проверка text decoration
+
+        let isUnderline:boolean = false
+        let isStroked: boolean = false
+
+        if (elem.textDecoration === 'STRIKETHROUGH') {
+            isUnderline = false;
+            isStroked = true;
+        }
+        if (elem.textDecoration === 'UNDERLINE') {
+          isUnderline = true;
+          isStroked = false;
+        }
+        
+        let textInfo:Text = {
+          text,
+          type,
+          size: {
+              width,
+              height,
+              x,
+              y,
+          },
+          style: {
+              font: {
+                  size,
+                  weight,
+                  isStroked,
+                  isUnderline,
+                  name,
+                  style
+              },
+              letterSpacing: spacingProp,
+              lineSpacing: lineHeightProp,
+              blur: blurProp,
+              isLocked,
+              opacity,
+              rotation,
           }
-        if(child.type === "RECTANGLE") {
-          const elem = child as RectangleNode
+        }
+        layouts.push(textInfo)
+        };
+
+        if(child.type ==='FRAME') {
+          const elem = child as FrameNode;
+
+          let {width, height, x, y, effects, name, backgrounds, strokes, type, strokeWeight} = elem
   
-          let {width, height, x, y, effects, name, fills, strokes, type, strokeWeight} = elem
           let colorStrokes: string = ''
           let borderStyle: string = ''
         
@@ -333,7 +275,7 @@ async function getStyles() {
           let offsetX: number = 0;
           let offsetY: number = 0;
           let shadowType: string = '';
-          let imageUrl:string = ''
+          
           
           effects.forEach((effect:Effect) => {
             if(effect.type === 'DROP_SHADOW') {
@@ -345,14 +287,9 @@ async function getStyles() {
             }
           })
           
-          const fillProp = fills as Paint[] 
-          for(const fill of fillProp) {
-            if(fill.type === 'IMAGE') {
-              imageUrl = await exportObject(elem)
-            }
-          }
-  
-          const rectangleNode:Rectangle = {
+          const imageUrl:string = await exportObject(elem)
+
+          const groupProp:Frame = {
             type,
             filename: imageUrl,
             size: {
@@ -360,9 +297,6 @@ async function getStyles() {
               height,
               x,
               y
-            },
-            background: {
-              url: imageUrl,
             },
             style: {
               border: {
@@ -378,30 +312,105 @@ async function getStyles() {
               }
             }
           }
-          layouts.push(rectangleNode)
+          layouts.push(groupProp)
         }
-  
-        
-      }
-      console.log(layouts);
+      if(child.type === "RECTANGLE") {
+        const elem = child as RectangleNode
+
+        let {width, height, x, y, effects, name, fills, strokes, type, strokeWeight} = elem
+        let colorStrokes: string = ''
+        let borderStyle: string = ''
       
+        strokes.forEach((paint:Paint) => {
+          if (paint.type === "SOLID") {
+            const solidPaint = paint as SolidPaint
+            colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
+            borderStyle = solidPaint.type
+      
+          }
+        })
+      
+        let shadowColor: string = ''
+        let shadowOpacity: number = 0
+        let offsetX: number = 0;
+        let offsetY: number = 0;
+        let shadowType: string = '';
+        let imageUrl:string = ''
+        
+        effects.forEach((effect:Effect) => {
+          if(effect.type === 'DROP_SHADOW') {
+            const dropShadow = effect as DropShadowEffect
+            shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b)
+            shadowOpacity = Math.ceil(dropShadow.color.a * 100)
+            offsetX = dropShadow.offset.x
+            offsetY = dropShadow.offset.y
+          }
+        })
+        
+        const fillProp = fills as Paint[] 
+        for(const fill of fillProp) {
+          if(fill.type === 'IMAGE') {
+            imageUrl = await exportObject(elem)
+          }
+        }
+
+        const rectangleNode:Rectangle = {
+          type,
+          filename: imageUrl,
+          size: {
+            width,
+            height,
+            x,
+            y
+          },
+          background: {
+            url: imageUrl,
+          },
+          style: {
+            border: {
+              color: colorStrokes, 
+              style: borderStyle,
+              weight: strokeWeight,
+            },
+            shadow: {
+              color: shadowColor,
+              opacity: shadowOpacity,
+              offsetX,
+              offsetY,
+            }
+          }
+        }
+        layouts.push(rectangleNode)
+      } 
+    }
+    return {
+      frameName,
+      layouts
     }
   }
- 
+
+
+  /// Если выбранный node элемент не содержит слово "logo" и не является FrameNode, пропускаем его  
+  return
 }
 
+
+// Основная функция, которая запускается при запуске плагина
 async function Flow() {
-  const data = await getStyles()
+  const selectedNodes = figma.currentPage.selection
+  let exitData = []
+  for(const node of selectedNodes) {
+    // Получаем стили для всех выделенных объектов
+    const logoData = await getStyles(node)
+    exitData.push(logoData)
+  }
 
-  const options = {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify(data)
-  };
-
-  fetch('', options)
+  // Отправляем готовый датасет на сервер 
+  console.log(exitData);
 }
 
-getStyles()
+
+//Запускаемые скрипты
+Flow()
+
+// getStyles()
