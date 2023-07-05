@@ -72,16 +72,16 @@ interface Rectangle {
     x: number,
     y: number,
   }
-  background: {
-    url?: string,
-    color?: string,
-    gradient?: {
-      firstColor: string,
-      firstColorX: number,
-      secondColor: string,
-      firstColorY: number
-    } 
-  }
+  // background: {
+  //   url?: string,
+  //   color?: string,
+  //   gradient?: {
+  //     firstColor: string,
+  //     firstColorX: number,
+  //     secondColor: string,
+  //     firstColorY: number
+  //   } 
+  // }
   style?: {
     border?: {
       weight: number | symbol,
@@ -277,7 +277,7 @@ async function getStyles(select:SceneNode) {
             }
           })
         
-          const shadow: object | null = {}
+          let shadow: object | null = {}
           let shadowColor: string | undefined
           let shadowOpacity: number | undefined
           let offsetX: number | undefined
@@ -290,6 +290,7 @@ async function getStyles(select:SceneNode) {
               shadowOpacity = Math.ceil(dropShadow.color.a * 100)
               offsetX = dropShadow.offset.x
               offsetY = dropShadow.offset.y
+              shadow = {color: shadowColor, offsetX, offsetY, shadowOpacity}
             }
           })
           
@@ -304,21 +305,19 @@ async function getStyles(select:SceneNode) {
               x,
               y
             },
-            style: {
-              // Если объекты border и shadow пустые, то не записываем их в объект слоя
-              ...(Object.keys(border).length > 0 && {border}),
-              ...(Object.keys(shadow).length > 0 && {shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY }})
-            }
+            ...(Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && {style: {border, shadow}})
           } as Frame
           layouts.push(groupProp)
         }
 
       if(child.type === "RECTANGLE") {
         const elem = child as RectangleNode
-
+        
+        
         let {width, height, x, y, effects, name, fills, strokes, type, strokeWeight} = elem
+        let rectangleProp = {} as Rectangle
 
-        const border: object | null = {}
+        let border: object | null = {}
         let colorStrokes: string | undefined
         let borderStyle: string | undefined
         let borderWeight: number | undefined
@@ -329,11 +328,11 @@ async function getStyles(select:SceneNode) {
             colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
             borderStyle = solidPaint.type
             borderWeight = strokeWeight as number
-            hasBorder = true
+            border = {color: colorStrokes, style: borderStyle, weight: borderWeight}
           }
         })
       
-        const shadow: object | null = {}
+        let shadow: object | null = {}
         let shadowColor: string = ''
         let shadowOpacity: number = 0
         let offsetX: number = 0;
@@ -347,6 +346,8 @@ async function getStyles(select:SceneNode) {
             shadowOpacity = Math.ceil(dropShadow.color.a * 100)
             offsetX = dropShadow.offset.x
             offsetY = dropShadow.offset.y
+            shadow = {color: shadowColor, offsetX, offsetY, shadowOpacity}
+
           }
         })
         
@@ -361,7 +362,7 @@ async function getStyles(select:SceneNode) {
           }
         }
 
-        const rectangleNode:Rectangle = {
+        rectangleProp = {
           type,
           filename: imageUrl,
           size: {
@@ -370,15 +371,10 @@ async function getStyles(select:SceneNode) {
             x,
             y
           },
-          background: {
-            url: imageUrl,
-          },
-          style: {
-            // ...(Object.keys(border).length > 0 && {border: {weight:borderWeight, color:colorStrokes, style: borderStyle}}),
-            ...(Object.keys(shadow).length > 0 && {shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY }})
-          },
-        }
-        layouts.push(rectangleNode)
+          ...(Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && {style: {border, shadow}})
+        } as Rectangle
+
+        layouts.push(rectangleProp)
       } 
     }
     return {

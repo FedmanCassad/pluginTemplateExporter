@@ -148,7 +148,7 @@ async function getStyles(select) {
                         border = { color: colorStrokes, style: borderStyle, weight: borderWeight };
                     }
                 });
-                const shadow = {};
+                let shadow = {};
                 let shadowColor;
                 let shadowOpacity;
                 let offsetX;
@@ -160,26 +160,23 @@ async function getStyles(select) {
                         shadowOpacity = Math.ceil(dropShadow.color.a * 100);
                         offsetX = dropShadow.offset.x;
                         offsetY = dropShadow.offset.y;
+                        shadow = { color: shadowColor, offsetX, offsetY, shadowOpacity };
                     }
                 });
                 const imageUrl = await exportObject(elem, "SVG");
-                groupProp = {
-                    type,
-                    filename: imageUrl,
-                    size: {
+                groupProp = Object.assign({ type, filename: imageUrl, size: {
                         width,
                         height,
                         x,
                         y
-                    },
-                    style: Object.assign(Object.assign({}, (Object.keys(border).length > 0 && { border })), (Object.keys(shadow).length > 0 && { shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY } }))
-                };
+                    } }, (Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && { style: { border, shadow } }));
                 layouts.push(groupProp);
             }
             if (child.type === "RECTANGLE") {
                 const elem = child;
                 let { width, height, x, y, effects, name, fills, strokes, type, strokeWeight } = elem;
-                const border = {};
+                let rectangleProp = {};
+                let border = {};
                 let colorStrokes;
                 let borderStyle;
                 let borderWeight;
@@ -189,10 +186,10 @@ async function getStyles(select) {
                         colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b);
                         borderStyle = solidPaint.type;
                         borderWeight = strokeWeight;
-                        hasBorder = true;
+                        border = { color: colorStrokes, style: borderStyle, weight: borderWeight };
                     }
                 });
-                const shadow = {};
+                let shadow = {};
                 let shadowColor = '';
                 let shadowOpacity = 0;
                 let offsetX = 0;
@@ -205,6 +202,7 @@ async function getStyles(select) {
                         shadowOpacity = Math.ceil(dropShadow.color.a * 100);
                         offsetX = dropShadow.offset.x;
                         offsetY = dropShadow.offset.y;
+                        shadow = { color: shadowColor, offsetX, offsetY, shadowOpacity };
                     }
                 });
                 const fillProp = fills;
@@ -217,21 +215,13 @@ async function getStyles(select) {
                         imageUrl = await exportObject(elem, "SVG");
                     }
                 }
-                const rectangleNode = {
-                    type,
-                    filename: imageUrl,
-                    size: {
+                rectangleProp = Object.assign({ type, filename: imageUrl, size: {
                         width,
                         height,
                         x,
                         y
-                    },
-                    background: {
-                        url: imageUrl,
-                    },
-                    style: Object.assign({}, (Object.keys(shadow).length > 0 && { shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY } })),
-                };
-                layouts.push(rectangleNode);
+                    } }, (Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && { style: { border, shadow } }));
+                layouts.push(rectangleProp);
             }
         }
         return {
