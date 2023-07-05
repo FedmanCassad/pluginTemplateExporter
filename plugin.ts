@@ -8,14 +8,14 @@ interface Text {
     y: number,
   },
   style: {
-    font?: {
-      name?: string,
-      style?: string,
-      size?: number | symbol,
-      color?: string,
-      weight?: number | symbol,
-      isUnderline?:boolean,
-      isStroked?:boolean,
+    font: {
+      name: string,
+      fontstyle: string,
+      size: number | symbol,
+      color: string,
+      weight: number | symbol,
+      isUnderline:boolean,
+      isStroked:boolean,
     },
     letterSpacing: {
       value: number
@@ -30,50 +30,49 @@ interface Text {
       unit: 'AUTO'
     },
     blur?: number,
-    isLocked?: boolean,
-    opacity?: number,
-    rotation?: number,
-    alignX?: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
-    alignY?: "CENTER" | "TOP" | "BOTTOM",
-    color?: string
+    isLocked: boolean,
+    opacity: number,
+    rotation: number,
+    alignX: "LEFT" | "CENTER" | "RIGHT" | "JUSTIFIED",
+    alignY: "CENTER" | "TOP" | "BOTTOM",
   }
 
 }
 
 interface Frame {
-  type?: string,
+  type: string,
   filename?: string,
-  size?: {
-    width?: number,
-    height?: number,
-    x?: number,
-    y?: number,
+  size: {
+    width: number,
+    height: number,
+    x: number,
+    y: number,
   }
   style?: {
     border?: {
       weight: number | symbol,
-      color?: string,
-      style?: string
+      color: string,
+      style: string
     },
     shadow?: {
-      color?: string,
-      offsetX?: number,
-      offsetY?: number,
-      opacity?: number,
+      color: string,
+      offsetX: number,
+      offsetY: number,
+      opacity: number,
     }
   }
 }
 
 interface Rectangle {
-  type?: string,
+  type: string,
   filename?: string,
-  size?: {
-    width?: number,
-    height?: number,
-    x?: number,
-    y?: number,
+  size: {
+    width: number,
+    height: number,
+    x: number,
+    y: number,
   }
-  background?: {
+  background: {
     url?: string,
     color?: string,
     gradient?: {
@@ -86,14 +85,14 @@ interface Rectangle {
   style?: {
     border?: {
       weight: number | symbol,
-      color?: string,
-      style?: string
+      color: string,
+      style: string
     },
     shadow?: {
-      color?: string,
-      offsetX?: number,
-      offsetY?: number,
-      opacity?: number,
+      color: string,
+      offsetX: number,
+      offsetY: number,
+      opacity: number,
     }
   }
 }
@@ -224,7 +223,7 @@ async function getStyles(select:SceneNode) {
           isStroked = false;
         }
         
-        let textInfo:Text = {
+        const textInfo:Text = {
           text,
           type,
           size: {
@@ -240,7 +239,8 @@ async function getStyles(select:SceneNode) {
                   isStroked,
                   isUnderline,
                   name,
-                  style
+                  fontstyle: style,
+                  color: fontColor,
               },
               letterSpacing: spacingProp,
               lineSpacing: lineHeightProp,
@@ -248,6 +248,8 @@ async function getStyles(select:SceneNode) {
               isLocked,
               opacity,
               rotation,
+              alignX,
+              alignY
           }
         }
         layouts.push(textInfo)
@@ -255,30 +257,34 @@ async function getStyles(select:SceneNode) {
 
         if(child.type ==='FRAME') {
           const elem = child as FrameNode;
-
-          let {width, height, x, y, effects, name, backgrounds, strokes, type, strokeWeight} = elem
-  
-          let colorStrokes: string = ''
-          let borderStyle: string = ''
+          
+          let {width, height, x, y, effects, backgrounds, strokes, type, strokeWeight} = elem
+          let groupProp = {} as Frame
+        
+          // Получаем данные о 
+          let border: object | null = {}
+          let colorStrokes: string | undefined
+          let borderStyle: string | undefined
+          let borderWeight: number | undefined
         
           strokes.forEach((paint:Paint) => {
             if (paint.type === "SOLID") {
               const solidPaint = paint as SolidPaint
               colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
               borderStyle = solidPaint.type
-              
+              borderWeight = strokeWeight as number
+              border = {color: colorStrokes, style: borderStyle, weight: borderWeight}
             }
           })
         
-          let shadowColor: string = ''
-          let shadowOpacity: number = 0
-          let offsetX: number = 0;
-          let offsetY: number = 0;
-          let shadowType: string = '';
-          
-          
+          const shadow: object | null = {}
+          let shadowColor: string | undefined
+          let shadowOpacity: number | undefined
+          let offsetX: number | undefined
+          let offsetY: number | undefined
+
           effects.forEach((effect:Effect) => {
-            if(effect.type === 'DROP_SHADOW') {
+            if(effect.type.toLocaleLowerCase().includes('shadow')) {
               const dropShadow = effect as DropShadowEffect
               shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b)
               shadowOpacity = Math.ceil(dropShadow.color.a * 100)
@@ -289,7 +295,7 @@ async function getStyles(select:SceneNode) {
           
           const imageUrl:string = await exportObject(elem, "SVG")
 
-          const groupProp:Frame = {
+          groupProp = {
             type,
             filename: imageUrl,
             size: {
@@ -299,42 +305,39 @@ async function getStyles(select:SceneNode) {
               y
             },
             style: {
-              border: {
-                color: colorStrokes, 
-                style: borderStyle,
-                weight: strokeWeight,
-              },
-              shadow: {
-                color: shadowColor,
-                opacity: shadowOpacity,
-                offsetX,
-                offsetY,
-              }
+              // Если объекты border и shadow пустые, то не записываем их в объект слоя
+              ...(Object.keys(border).length > 0 && {border}),
+              ...(Object.keys(shadow).length > 0 && {shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY }})
             }
-          }
+          } as Frame
           layouts.push(groupProp)
         }
+
       if(child.type === "RECTANGLE") {
         const elem = child as RectangleNode
 
         let {width, height, x, y, effects, name, fills, strokes, type, strokeWeight} = elem
-        let colorStrokes: string = ''
-        let borderStyle: string = ''
+
+        const border: object | null = {}
+        let colorStrokes: string | undefined
+        let borderStyle: string | undefined
+        let borderWeight: number | undefined
       
         strokes.forEach((paint:Paint) => {
           if (paint.type === "SOLID") {
             const solidPaint = paint as SolidPaint
             colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b)
             borderStyle = solidPaint.type
-      
+            borderWeight = strokeWeight as number
+            hasBorder = true
           }
         })
       
+        const shadow: object | null = {}
         let shadowColor: string = ''
         let shadowOpacity: number = 0
         let offsetX: number = 0;
         let offsetY: number = 0;
-        let shadowType: string = '';
         let imageUrl:string = ''
         
         effects.forEach((effect:Effect) => {
@@ -371,18 +374,9 @@ async function getStyles(select:SceneNode) {
             url: imageUrl,
           },
           style: {
-            border: {
-              color: colorStrokes, 
-              style: borderStyle,
-              weight: strokeWeight,
-            },
-            shadow: {
-              color: shadowColor,
-              opacity: shadowOpacity,
-              offsetX,
-              offsetY,
-            }
-          }
+            // ...(Object.keys(border).length > 0 && {border: {weight:borderWeight, color:colorStrokes, style: borderStyle}}),
+            ...(Object.keys(shadow).length > 0 && {shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY }})
+          },
         }
         layouts.push(rectangleNode)
       } 
@@ -411,6 +405,7 @@ async function Flow() {
 
   // Отправляем готовый датасет на сервер 
   console.log(exitData);
+  figma.closePlugin('Все данные успешно получены.')
 }
 
 

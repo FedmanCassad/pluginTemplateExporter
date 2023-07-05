@@ -98,7 +98,7 @@ async function getStyles(select) {
                     isUnderline = true;
                     isStroked = false;
                 }
-                let textInfo = {
+                const textInfo = {
                     text,
                     type,
                     size: {
@@ -114,7 +114,8 @@ async function getStyles(select) {
                             isStroked,
                             isUnderline,
                             name,
-                            style
+                            fontstyle: style,
+                            color: fontColor,
                         },
                         letterSpacing: spacingProp,
                         lineSpacing: lineHeightProp,
@@ -122,6 +123,8 @@ async function getStyles(select) {
                         isLocked,
                         opacity,
                         rotation,
+                        alignX,
+                        alignY
                     }
                 };
                 layouts.push(textInfo);
@@ -129,23 +132,29 @@ async function getStyles(select) {
             ;
             if (child.type === 'FRAME') {
                 const elem = child;
-                let { width, height, x, y, effects, name, backgrounds, strokes, type, strokeWeight } = elem;
-                let colorStrokes = '';
-                let borderStyle = '';
+                let { width, height, x, y, effects, backgrounds, strokes, type, strokeWeight } = elem;
+                let groupProp = {};
+                // Получаем данные о 
+                let border = {};
+                let colorStrokes;
+                let borderStyle;
+                let borderWeight;
                 strokes.forEach((paint) => {
                     if (paint.type === "SOLID") {
                         const solidPaint = paint;
                         colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b);
                         borderStyle = solidPaint.type;
+                        borderWeight = strokeWeight;
+                        border = { color: colorStrokes, style: borderStyle, weight: borderWeight };
                     }
                 });
-                let shadowColor = '';
-                let shadowOpacity = 0;
-                let offsetX = 0;
-                let offsetY = 0;
-                let shadowType = '';
+                const shadow = {};
+                let shadowColor;
+                let shadowOpacity;
+                let offsetX;
+                let offsetY;
                 effects.forEach((effect) => {
-                    if (effect.type === 'DROP_SHADOW') {
+                    if (effect.type.toLocaleLowerCase().includes('shadow')) {
                         const dropShadow = effect;
                         shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b);
                         shadowOpacity = Math.ceil(dropShadow.color.a * 100);
@@ -154,7 +163,7 @@ async function getStyles(select) {
                     }
                 });
                 const imageUrl = await exportObject(elem, "SVG");
-                const groupProp = {
+                groupProp = {
                     type,
                     filename: imageUrl,
                     size: {
@@ -163,39 +172,31 @@ async function getStyles(select) {
                         x,
                         y
                     },
-                    style: {
-                        border: {
-                            color: colorStrokes,
-                            style: borderStyle,
-                            weight: strokeWeight,
-                        },
-                        shadow: {
-                            color: shadowColor,
-                            opacity: shadowOpacity,
-                            offsetX,
-                            offsetY,
-                        }
-                    }
+                    style: Object.assign(Object.assign({}, (Object.keys(border).length > 0 && { border })), (Object.keys(shadow).length > 0 && { shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY } }))
                 };
                 layouts.push(groupProp);
             }
             if (child.type === "RECTANGLE") {
                 const elem = child;
                 let { width, height, x, y, effects, name, fills, strokes, type, strokeWeight } = elem;
-                let colorStrokes = '';
-                let borderStyle = '';
+                const border = {};
+                let colorStrokes;
+                let borderStyle;
+                let borderWeight;
                 strokes.forEach((paint) => {
                     if (paint.type === "SOLID") {
                         const solidPaint = paint;
                         colorStrokes = rgbToHex(solidPaint.color.r, solidPaint.color.g, solidPaint.color.b);
                         borderStyle = solidPaint.type;
+                        borderWeight = strokeWeight;
+                        hasBorder = true;
                     }
                 });
+                const shadow = {};
                 let shadowColor = '';
                 let shadowOpacity = 0;
                 let offsetX = 0;
                 let offsetY = 0;
-                let shadowType = '';
                 let imageUrl = '';
                 effects.forEach((effect) => {
                     if (effect.type === 'DROP_SHADOW') {
@@ -228,19 +229,7 @@ async function getStyles(select) {
                     background: {
                         url: imageUrl,
                     },
-                    style: {
-                        border: {
-                            color: colorStrokes,
-                            style: borderStyle,
-                            weight: strokeWeight,
-                        },
-                        shadow: {
-                            color: shadowColor,
-                            opacity: shadowOpacity,
-                            offsetX,
-                            offsetY,
-                        }
-                    }
+                    style: Object.assign({}, (Object.keys(shadow).length > 0 && { shadow: { color: shadowColor, opacity: shadowOpacity, offsetX: offsetX, offsetY: offsetY } })),
                 };
                 layouts.push(rectangleNode);
             }
@@ -264,6 +253,7 @@ async function Flow() {
     }
     // Отправляем готовый датасет на сервер 
     console.log(exitData);
+    figma.closePlugin('Все данные успешно получены.');
 }
 //Запускаемые скрипты
 Flow();
