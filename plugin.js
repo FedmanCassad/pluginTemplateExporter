@@ -66,6 +66,7 @@ async function getStyles() {
     if (select && select.type === 'FRAME' && select.children) {
         let layouts = [];
         const children = select.children;
+        const frameName = select.name;
         for (const child of children) {
             if (child.type === "TEXT") {
                 const elem = child;
@@ -247,7 +248,17 @@ async function getStyles() {
         }
         console.log(layouts);
     }
-    figma.closePlugin();
+}
+async function Flow() {
+    const data = await getStyles();
+    const options = {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+    };
+    fetch('', options);
 }
 // function saveFile() {
 //   if (figma.command == 'save') {
@@ -271,4 +282,5 @@ async function getStyles() {
 //   }
 // }
 // saveFile();
+// figma.showUI(__html__)
 getStyles();

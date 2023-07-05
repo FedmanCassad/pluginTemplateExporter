@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+</head>
+<body>
+  
+  <button onclick="downloadImage('Привет', 'Hello.txt')">Сохранить</button>
+  <script >
+  function saveFile(data, filename) {
+    // Создаем Blob из переданных данных
+    const blob = new Blob([data], { type: 'PNG' });
+  
+    // Создаем ссылку на Blob
+    const url = URL.createObjectURL(blob);
+  
+    // Создаем ссылку для загрузки файла
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = filename;
+  
+    // Добавляем ссылку на страницу и эмулируем нажатие
+    document.body.appendChild(link);
+    link.click();
+  
+    // Удаляем ссылку
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }
+
+  function downloadImage(url, filename) {
+    const link = document.createElement('a')
+    link.href = url
+    link.download = filename
+  }
+
+  </script>
+</body>
+</html>
