@@ -157,7 +157,7 @@ async function sendPostRequest(url: string, data: object): Promise<any> {
 // Функция эскпорта изображений (зависит от названия в узле 'img'/ 'vector')
 async function exportObject(node:SceneNode, exportType: "PNG" | "SVG") {
   const exportOptions:ExportSettings = { format: exportType}; // указываются параметры экспорта
-  const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
+  const imageData = await node.exportAsync(exportOptions); 
   const exportData = {
     size: {
       width: node.width,
@@ -175,7 +175,7 @@ async function exportObject(node:SceneNode, exportType: "PNG" | "SVG") {
 
 async function getStyles(select:SceneNode) {
 
-  if(select && select.type === 'FRAME' && select.children && select.name.includes('logo')) {
+  if(select && select.type === 'FRAME' && select.children && select.name.toLowerCase().includes('logo')) {
     let layouts:(Text | Frame | Rectangle)[] = []
     select as FrameNode
 
@@ -296,6 +296,7 @@ async function getStyles(select:SceneNode) {
           let offsetY: number | undefined
           
           // значение блюра
+          let blur: object | null = {} 
 
           effects.forEach((effect:Effect) => {
             if(effect.type === 'DROP_SHADOW' || effect.type ==='INNER_SHADOW') {
@@ -309,7 +310,7 @@ async function getStyles(select:SceneNode) {
 
             if(effect.type ==="LAYER_BLUR") {
               const blurStyle: BlurEffect = effect 
-              console.log(blurStyle)
+              blur = {value: blurStyle.radius, type: blurStyle.type}
             }
           })
           
@@ -324,7 +325,7 @@ async function getStyles(select:SceneNode) {
               x,
               y
             },
-            style: {shadow, border}
+            style: {shadow, border, blur}
           } as Frame
           layouts.push(groupProp)
         }
@@ -334,7 +335,7 @@ async function getStyles(select:SceneNode) {
         
         
         let {width, height, x, y, effects, fills, strokes, strokeWeight} = elem
-        let type: string = 'rectangle'
+        let type: string = ''
         let rectangleProp = {} as Rectangle
         let border: object | null = {}
         let colorStrokes: string | undefined
@@ -358,6 +359,8 @@ async function getStyles(select:SceneNode) {
         let offsetY: number = 0;
         let imageUrl:string = ''
         
+        let blur: object | null = {} 
+
         effects.forEach((effect:Effect) => {
           if(effect.type === 'DROP_SHADOW' || effect.type ==='INNER_SHADOW') {
             const styleShadow: DropShadowEffect | InnerShadowEffect = effect 
@@ -367,22 +370,28 @@ async function getStyles(select:SceneNode) {
             offsetY = styleShadow.offset.y
             shadow = {color: shadowColor, offsetX, offsetY, shadowOpacity}
           }
+
+          if(effect.type ==="LAYER_BLUR") {
+            const blurStyle: BlurEffect = effect 
+            blur = {value: blurStyle.radius, type: blurStyle.type}
+          }
         })
-        
 
 
         const fillProp = fills as Paint[] 
         for(const fill of fillProp) {
           // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
-          if(fill.type === "IMAGE" && child.name.includes('img')) {
+          if(fill.type === "IMAGE" ) {
             imageUrl = await exportObject(elem, "PNG")
             type = 'img'
             break
           }
-          if (child.name.includes('vector')) {
+          if (elem.name.includes('vector')) {
             imageUrl = await exportObject(elem, "SVG")
+            type = 'vector'
             break
           }
+        }
 
         rectangleProp = {
           type,
@@ -393,13 +402,13 @@ async function getStyles(select:SceneNode) {
             x,
             y
           },
-          style: {shadow, border}
+          style: {shadow, border, blur}
         } as Rectangle
 
         layouts.push(rectangleProp)
       } 
     }
-  }
+  
     return {
       frameName,
       rootWidth,
@@ -426,12 +435,11 @@ async function Run() {
   }
   
   // Отправляем готовый датасет на сервер 
-  console.log(JSON.stringify(exitData), correctionName('logo - insta post - 1'));
+  console.log(exitData)
   figma.showUI(__html__, {width: 300, height: 300})
- 
   figma.ui.postMessage(exitData)
-  // setTimeout(()=> figma.closePlugin('Все данные успешно получены.'), 5000)
 }
+
 
 
 //Запуск плагина

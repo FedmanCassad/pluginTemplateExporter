@@ -45,7 +45,7 @@ async function sendPostRequest(url, data) {
 // Функция эскпорта изображений (зависит от названия в узле 'img'/ 'vector')
 async function exportObject(node, exportType) {
     const exportOptions = { format: exportType }; // указываются параметры экспорта
-    const imageData = await node.exportAsync(exportOptions); // вызывается функция exportAsync для экспорта объекта с заданными параметрами
+    const imageData = await node.exportAsync(exportOptions);
     const exportData = {
         size: {
             width: node.width,
@@ -59,7 +59,7 @@ async function exportObject(node, exportType) {
     return response.url;
 }
 async function getStyles(select) {
-    if (select && select.type === 'FRAME' && select.children && select.name.includes('logo')) {
+    if (select && select.type === 'FRAME' && select.children && select.name.toLowerCase().includes('logo')) {
         let layouts = [];
         select;
         const children = select.children;
@@ -165,6 +165,7 @@ async function getStyles(select) {
                 let offsetX;
                 let offsetY;
                 // значение блюра
+                let blur = {};
                 effects.forEach((effect) => {
                     if (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW') {
                         const styleShadow = effect;
@@ -176,7 +177,7 @@ async function getStyles(select) {
                     }
                     if (effect.type === "LAYER_BLUR") {
                         const blurStyle = effect;
-                        console.log(blurStyle);
+                        blur = { value: blurStyle.radius, type: blurStyle.type };
                     }
                 });
                 const imageUrl = await exportObject(elem, "SVG");
@@ -189,14 +190,14 @@ async function getStyles(select) {
                         x,
                         y
                     },
-                    style: { shadow, border }
+                    style: { shadow, border, blur }
                 };
                 layouts.push(groupProp);
             }
             if (child.type === "RECTANGLE") {
                 const elem = child;
                 let { width, height, x, y, effects, fills, strokes, strokeWeight } = elem;
-                let type = 'rectangle';
+                let type = '';
                 let rectangleProp = {};
                 let border = {};
                 let colorStrokes;
@@ -217,6 +218,7 @@ async function getStyles(select) {
                 let offsetX = 0;
                 let offsetY = 0;
                 let imageUrl = '';
+                let blur = {};
                 effects.forEach((effect) => {
                     if (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW') {
                         const styleShadow = effect;
@@ -226,32 +228,37 @@ async function getStyles(select) {
                         offsetY = styleShadow.offset.y;
                         shadow = { color: shadowColor, offsetX, offsetY, shadowOpacity };
                     }
+                    if (effect.type === "LAYER_BLUR") {
+                        const blurStyle = effect;
+                        blur = { value: blurStyle.radius, type: blurStyle.type };
+                    }
                 });
                 const fillProp = fills;
                 for (const fill of fillProp) {
                     // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
-                    if (fill.type === "IMAGE" && child.name.includes('img')) {
+                    if (fill.type === "IMAGE") {
                         imageUrl = await exportObject(elem, "PNG");
                         type = 'img';
                         break;
                     }
-                    if (child.name.includes('vector')) {
+                    if (elem.name.includes('vector')) {
                         imageUrl = await exportObject(elem, "SVG");
+                        type = 'vector';
                         break;
                     }
-                    rectangleProp = {
-                        type,
-                        filename: imageUrl,
-                        size: {
-                            width,
-                            height,
-                            x,
-                            y
-                        },
-                        style: { shadow, border }
-                    };
-                    layouts.push(rectangleProp);
                 }
+                rectangleProp = {
+                    type,
+                    filename: imageUrl,
+                    size: {
+                        width,
+                        height,
+                        x,
+                        y
+                    },
+                    style: { shadow, border, blur }
+                };
+                layouts.push(rectangleProp);
             }
         }
         return {
@@ -275,10 +282,9 @@ async function Run() {
         exitData.push(logoData);
     }
     // Отправляем готовый датасет на сервер 
-    console.log(JSON.stringify(exitData), correctionName('logo - insta post - 1'));
+    console.log(exitData);
     figma.showUI(__html__, { width: 300, height: 300 });
     figma.ui.postMessage(exitData);
-    // setTimeout(()=> figma.closePlugin('Все данные успешно получены.'), 5000)
 }
 //Запуск плагина
 Run();
