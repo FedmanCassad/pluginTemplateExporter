@@ -72,16 +72,15 @@ interface Rectangle {
     x: number,
     y: number,
   }
-  // background: {
-  //   url?: string,
-  //   color?: string,
-  //   gradient?: {
-  //     firstColor: string,
-  //     firstColorX: number,
-  //     secondColor: string,
-  //     firstColorY: number
-  //   } 
-  // }
+  background?: {
+    color?: string,
+    gradient?: {
+      firstColor: string,
+      firstColorX: number,
+      secondColor: string,
+      firstColorY: number
+    } 
+  }
   style?: {
     border?: {
       weight: number | symbol,
@@ -97,6 +96,7 @@ interface Rectangle {
   }
 }
 
+let exitData
 
 // Функция переводит цвета из rgb в hex
 function rgbToHex(r: number, g: number, b: number): string {
@@ -130,6 +130,7 @@ function rgbToHex(r: number, g: number, b: number): string {
 function correctionName (name:string) {  
   return name.split(' ').join('');
 }
+
 
 // Функция запроса конечной ссылки для изображения
 async function sendPostRequest(url: string, data: object): Promise<any> {
@@ -176,9 +177,20 @@ async function getStyles(select:SceneNode) {
 
   if(select && select.type === 'FRAME' && select.children && select.name.includes('logo')) {
     let layouts:(Text | Frame | Rectangle)[] = []
-    
+    select as FrameNode
+
     const children = select.children
     const frameName = select.name
+    const rootWidth = select.width
+    const rootHeight = select.height
+    let rootFill: string = '';
+    select.backgrounds.forEach((backProp)=>{
+      if(backProp.type === 'SOLID') {
+        rootFill = rgbToHex(backProp.color.r, backProp.color.g, backProp.color.b)
+      }
+    }) 
+
+    
 
     for (const child of children) {
       if(child.type ==="TEXT") {
@@ -258,9 +270,9 @@ async function getStyles(select:SceneNode) {
         if(child.type ==='FRAME') {
           const elem = child as FrameNode;
           
-          let {width, height, x, y, effects, backgrounds, strokes, type, strokeWeight} = elem
+          let {width, height, x, y, effects, strokes, strokeWeight} = elem
           let groupProp = {} as Frame
-        
+          const type: string = 'vector'
           // Получаем данные о 
           let border: object | null = {}
           let colorStrokes: string | undefined
@@ -314,9 +326,9 @@ async function getStyles(select:SceneNode) {
         const elem = child as RectangleNode
         
         
-        let {width, height, x, y, effects, name, fills, strokes, type, strokeWeight} = elem
+        let {width, height, x, y, effects, fills, strokes, strokeWeight} = elem
+        let type: string = 'rectangle'
         let rectangleProp = {} as Rectangle
-
         let border: object | null = {}
         let colorStrokes: string | undefined
         let borderStyle: string | undefined
@@ -351,16 +363,27 @@ async function getStyles(select:SceneNode) {
           }
         })
         
+        let background: object | null = {}
+
+
         const fillProp = fills as Paint[] 
         for(const fill of fillProp) {
           // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
           if(fill.type === "IMAGE" && child.name.includes('img')) {
             imageUrl = await exportObject(elem, "PNG")
+            type = 'img'
+            background = {}
+            break
           }
-          else if (child.name.includes('vector')) {
+          if (child.name.includes('vector')) {
             imageUrl = await exportObject(elem, "SVG")
+            break
           }
+
+          
         }
+
+        
 
         rectangleProp = {
           type,
@@ -371,6 +394,7 @@ async function getStyles(select:SceneNode) {
             x,
             y
           },
+          ...(Object.keys(background).length > 0 && {background}),
           ...(Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && {style: {border, shadow}})
         } as Rectangle
 
@@ -379,7 +403,10 @@ async function getStyles(select:SceneNode) {
     }
     return {
       frameName,
-      layouts
+      rootWidth,
+      rootHeight,
+      rootFill,
+      layouts,
     }
   }
 
@@ -389,7 +416,7 @@ async function getStyles(select:SceneNode) {
 }
 
 
-// Основная функция, которая запускается при запуске плагина
+// Основная функция, которая срабатывает при запуске плагина
 async function Flow() {
   const selectedNodes = figma.currentPage.selection
   let exitData = []
@@ -398,10 +425,12 @@ async function Flow() {
     const logoData = await getStyles(node)
     exitData.push(logoData)
   }
-
+  
   // Отправляем готовый датасет на сервер 
   console.log(exitData);
-  figma.closePlugin('Все данные успешно получены.')
+  figma.showUI(__html__, {width: 300, height: 300})
+  figma.ui.postMessage(exitData)
+  // figma.closePlugin('Все данные успешно получены.')
 }
 
 

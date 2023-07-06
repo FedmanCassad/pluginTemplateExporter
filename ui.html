@@ -6,35 +6,37 @@
   <title>Document</title>
 </head>
 <body>
-  
-  <button onclick="downloadImage('Привет', 'Hello.txt')">Сохранить</button>
   <script >
+  
   function saveFile(data, filename) {
-    // Создаем Blob из переданных данных
-    const blob = new Blob([data], { type: 'PNG' });
-  
-    // Создаем ссылку на Blob
-    const url = URL.createObjectURL(blob);
-  
-    // Создаем ссылку для загрузки файла
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = filename;
-  
-    // Добавляем ссылку на страницу и эмулируем нажатие
-    document.body.appendChild(link);
-    link.click();
-  
-    // Удаляем ссылку
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }
+  // Преобразуем объект данных в строку JSON
+  const jsonData = JSON.stringify(data);
 
-  function downloadImage(url, filename) {
-    const link = document.createElement('a')
-    link.href = url
-    link.download = filename
-  }
+  // Создаем Blob из строки JSON
+  const blob = new Blob([jsonData], { type: 'application/json' });
+
+  // Создаем ссылку на Blob
+  const url = URL.createObjectURL(blob);
+
+  // Создаем ссылку для загрузки файла
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = filename;
+
+  // Добавляем ссылку на страницу и эмулируем нажатие
+  document.body.appendChild(link);
+  link.click();
+
+  // Удаляем ссылку
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+}
+
+  window.addEventListener('message', (event) => {
+    const pluginData = event.data.pluginMessage;
+    saveFile(pluginData, 'data.json')
+    console.log(pluginData);
+  });
 
   </script>
 </body>

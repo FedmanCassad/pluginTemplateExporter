@@ -1,4 +1,5 @@
 "use strict";
+let exitData;
 // Функция переводит цвета из rgb в hex
 function rgbToHex(r, g, b) {
     // Приводим значение rgb из процентного в 8-битный
@@ -60,8 +61,17 @@ async function exportObject(node, exportType) {
 async function getStyles(select) {
     if (select && select.type === 'FRAME' && select.children && select.name.includes('logo')) {
         let layouts = [];
+        select;
         const children = select.children;
         const frameName = select.name;
+        const rootWidth = select.width;
+        const rootHeight = select.height;
+        let rootFill = '';
+        select.backgrounds.forEach((backProp) => {
+            if (backProp.type === 'SOLID') {
+                rootFill = rgbToHex(backProp.color.r, backProp.color.g, backProp.color.b);
+            }
+        });
         for (const child of children) {
             if (child.type === "TEXT") {
                 const elem = child;
@@ -132,8 +142,9 @@ async function getStyles(select) {
             ;
             if (child.type === 'FRAME') {
                 const elem = child;
-                let { width, height, x, y, effects, backgrounds, strokes, type, strokeWeight } = elem;
+                let { width, height, x, y, effects, strokes, strokeWeight } = elem;
                 let groupProp = {};
+                const type = 'vector';
                 // Получаем данные о 
                 let border = {};
                 let colorStrokes;
@@ -174,7 +185,8 @@ async function getStyles(select) {
             }
             if (child.type === "RECTANGLE") {
                 const elem = child;
-                let { width, height, x, y, effects, name, fills, strokes, type, strokeWeight } = elem;
+                let { width, height, x, y, effects, fills, strokes, strokeWeight } = elem;
+                let type = 'rectangle';
                 let rectangleProp = {};
                 let border = {};
                 let colorStrokes;
@@ -205,34 +217,42 @@ async function getStyles(select) {
                         shadow = { color: shadowColor, offsetX, offsetY, shadowOpacity };
                     }
                 });
+                let background = {};
                 const fillProp = fills;
                 for (const fill of fillProp) {
                     // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
                     if (fill.type === "IMAGE" && child.name.includes('img')) {
                         imageUrl = await exportObject(elem, "PNG");
+                        type = 'img';
+                        background = {};
+                        break;
                     }
-                    else if (child.name.includes('vector')) {
+                    if (child.name.includes('vector')) {
                         imageUrl = await exportObject(elem, "SVG");
+                        break;
                     }
                 }
-                rectangleProp = Object.assign({ type, filename: imageUrl, size: {
+                rectangleProp = Object.assign(Object.assign({ type, filename: imageUrl, size: {
                         width,
                         height,
                         x,
                         y
-                    } }, (Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && { style: { border, shadow } }));
+                    } }, (Object.keys(background).length > 0 && { background })), (Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && { style: { border, shadow } }));
                 layouts.push(rectangleProp);
             }
         }
         return {
             frameName,
-            layouts
+            rootWidth,
+            rootHeight,
+            rootFill,
+            layouts,
         };
     }
     /// Если выбранный node элемент не содержит слово "logo" и не является FrameNode, пропускаем его  
     return;
 }
-// Основная функция, которая запускается при запуске плагина
+// Основная функция, которая срабатывает при запуске плагина
 async function Flow() {
     const selectedNodes = figma.currentPage.selection;
     let exitData = [];
@@ -243,7 +263,9 @@ async function Flow() {
     }
     // Отправляем готовый датасет на сервер 
     console.log(exitData);
-    figma.closePlugin('Все данные успешно получены.');
+    figma.showUI(__html__, { width: 300, height: 300 });
+    figma.ui.postMessage(exitData);
+    // figma.closePlugin('Все данные успешно получены.')
 }
 //Запускаемые скрипты
 Flow();
