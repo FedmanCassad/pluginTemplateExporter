@@ -1,3 +1,4 @@
+
 interface Text {
   type: string,
   text: string,
@@ -131,7 +132,6 @@ function correctionName (name:string) {
   return name.split(' ').join('');
 }
 
-
 // Функция запроса конечной ссылки для изображения
 async function sendPostRequest(url: string, data: object): Promise<any> {
   try {
@@ -180,7 +180,7 @@ async function getStyles(select:SceneNode) {
     select as FrameNode
 
     const children = select.children
-    const frameName = select.name
+    let frameName = correctionName(select.name)
     const rootWidth = select.width
     const rootHeight = select.height
     let rootFill: string = '';
@@ -294,15 +294,22 @@ async function getStyles(select:SceneNode) {
           let shadowOpacity: number | undefined
           let offsetX: number | undefined
           let offsetY: number | undefined
+          
+          // значение блюра
 
           effects.forEach((effect:Effect) => {
-            if(effect.type.toLocaleLowerCase().includes('shadow')) {
-              const dropShadow = effect as DropShadowEffect
-              shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b)
-              shadowOpacity = Math.ceil(dropShadow.color.a * 100)
-              offsetX = dropShadow.offset.x
-              offsetY = dropShadow.offset.y
+            if(effect.type === 'DROP_SHADOW' || effect.type ==='INNER_SHADOW') {
+              const styleShadow: DropShadowEffect | InnerShadowEffect = effect 
+              shadowColor = rgbToHex(styleShadow.color.r, styleShadow.color.g, styleShadow.color.b)
+              shadowOpacity = Math.ceil(styleShadow.color.a * 100)
+              offsetX = styleShadow.offset.x
+              offsetY = styleShadow.offset.y
               shadow = {color: shadowColor, offsetX, offsetY, shadowOpacity}
+            }
+
+            if(effect.type ==="LAYER_BLUR") {
+              const blurStyle: BlurEffect = effect 
+              console.log(blurStyle)
             }
           })
           
@@ -317,7 +324,7 @@ async function getStyles(select:SceneNode) {
               x,
               y
             },
-            ...(Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && {style: {border, shadow}})
+            style: {shadow, border}
           } as Frame
           layouts.push(groupProp)
         }
@@ -352,18 +359,16 @@ async function getStyles(select:SceneNode) {
         let imageUrl:string = ''
         
         effects.forEach((effect:Effect) => {
-          if(effect.type === 'DROP_SHADOW') {
-            const dropShadow = effect as DropShadowEffect
-            shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b)
-            shadowOpacity = Math.ceil(dropShadow.color.a * 100)
-            offsetX = dropShadow.offset.x
-            offsetY = dropShadow.offset.y
+          if(effect.type === 'DROP_SHADOW' || effect.type ==='INNER_SHADOW') {
+            const styleShadow: DropShadowEffect | InnerShadowEffect = effect 
+            shadowColor = rgbToHex(styleShadow.color.r, styleShadow.color.g, styleShadow.color.b)
+            shadowOpacity = Math.ceil(styleShadow.color.a * 100)
+            offsetX = styleShadow.offset.x
+            offsetY = styleShadow.offset.y
             shadow = {color: shadowColor, offsetX, offsetY, shadowOpacity}
-
           }
         })
         
-        let background: object | null = {}
 
 
         const fillProp = fills as Paint[] 
@@ -372,18 +377,12 @@ async function getStyles(select:SceneNode) {
           if(fill.type === "IMAGE" && child.name.includes('img')) {
             imageUrl = await exportObject(elem, "PNG")
             type = 'img'
-            background = {}
             break
           }
           if (child.name.includes('vector')) {
             imageUrl = await exportObject(elem, "SVG")
             break
           }
-
-          
-        }
-
-        
 
         rectangleProp = {
           type,
@@ -394,13 +393,13 @@ async function getStyles(select:SceneNode) {
             x,
             y
           },
-          ...(Object.keys(background).length > 0 && {background}),
-          ...(Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && {style: {border, shadow}})
+          style: {shadow, border}
         } as Rectangle
 
         layouts.push(rectangleProp)
       } 
     }
+  }
     return {
       frameName,
       rootWidth,
@@ -417,7 +416,7 @@ async function getStyles(select:SceneNode) {
 
 
 // Основная функция, которая срабатывает при запуске плагина
-async function Flow() {
+async function Run() {
   const selectedNodes = figma.currentPage.selection
   let exitData = []
   for(const node of selectedNodes) {
@@ -427,14 +426,13 @@ async function Flow() {
   }
   
   // Отправляем готовый датасет на сервер 
-  console.log(exitData);
+  console.log(JSON.stringify(exitData), correctionName('logo - insta post - 1'));
   figma.showUI(__html__, {width: 300, height: 300})
+ 
   figma.ui.postMessage(exitData)
-  // figma.closePlugin('Все данные успешно получены.')
+  // setTimeout(()=> figma.closePlugin('Все данные успешно получены.'), 5000)
 }
 
 
-//Запускаемые скрипты
-Flow()
-
-// getStyles()
+//Запуск плагина
+Run()

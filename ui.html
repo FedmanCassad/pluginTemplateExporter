@@ -4,40 +4,44 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Document</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.6.0/jszip.min.js"></script>
 </head>
 <body>
-  <script >
-  
-  function saveFile(data, filename) {
-  // Преобразуем объект данных в строку JSON
-  const jsonData = JSON.stringify(data);
+  <script>
+    async function saveFiles(files) {
+    const zip = new JSZip();
 
-  // Создаем Blob из строки JSON
-  const blob = new Blob([jsonData], { type: 'application/json' });
+      // Добавляем каждый файл в ZIP-архив
+      files.forEach((file) => {
+        const jsonData = JSON.stringify(file);
+        
+        zip.file(`${file.frameName}.json`, jsonData);
+      });
 
-  // Создаем ссылку на Blob
-  const url = URL.createObjectURL(blob);
+    //   // Генерируем ZIP-архив и предлагаем его скачать
+        await zip.generateAsync({ type: 'blob' }).then((content) => {
+        const url = URL.createObjectURL(content);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = 'files.zip'; // Имя ZIP-файла
 
-  // Создаем ссылку для загрузки файла
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = filename;
+        // Добавляем ссылку на страницу и эмулируем нажатие
+        document.body.appendChild(link);
+        link.click();
 
-  // Добавляем ссылку на страницу и эмулируем нажатие
-  document.body.appendChild(link);
-  link.click();
+        // Удаляем ссылку
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+      });
+    }
 
-  // Удаляем ссылку
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
-}
-
-  window.addEventListener('message', (event) => {
+    window.addEventListener('message', (event) => {
     const pluginData = event.data.pluginMessage;
-    saveFile(pluginData, 'data.json')
+    saveFiles(pluginData)
     console.log(pluginData);
   });
 
   </script>
 </body>
 </html>
+

@@ -63,7 +63,7 @@ async function getStyles(select) {
         let layouts = [];
         select;
         const children = select.children;
-        const frameName = select.name;
+        let frameName = correctionName(select.name);
         const rootWidth = select.width;
         const rootHeight = select.height;
         let rootFill = '';
@@ -164,23 +164,33 @@ async function getStyles(select) {
                 let shadowOpacity;
                 let offsetX;
                 let offsetY;
+                // значение блюра
                 effects.forEach((effect) => {
-                    if (effect.type.toLocaleLowerCase().includes('shadow')) {
-                        const dropShadow = effect;
-                        shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b);
-                        shadowOpacity = Math.ceil(dropShadow.color.a * 100);
-                        offsetX = dropShadow.offset.x;
-                        offsetY = dropShadow.offset.y;
+                    if (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW') {
+                        const styleShadow = effect;
+                        shadowColor = rgbToHex(styleShadow.color.r, styleShadow.color.g, styleShadow.color.b);
+                        shadowOpacity = Math.ceil(styleShadow.color.a * 100);
+                        offsetX = styleShadow.offset.x;
+                        offsetY = styleShadow.offset.y;
                         shadow = { color: shadowColor, offsetX, offsetY, shadowOpacity };
+                    }
+                    if (effect.type === "LAYER_BLUR") {
+                        const blurStyle = effect;
+                        console.log(blurStyle);
                     }
                 });
                 const imageUrl = await exportObject(elem, "SVG");
-                groupProp = Object.assign({ type, filename: imageUrl, size: {
+                groupProp = {
+                    type,
+                    filename: imageUrl,
+                    size: {
                         width,
                         height,
                         x,
                         y
-                    } }, (Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && { style: { border, shadow } }));
+                    },
+                    style: { shadow, border }
+                };
                 layouts.push(groupProp);
             }
             if (child.type === "RECTANGLE") {
@@ -208,37 +218,40 @@ async function getStyles(select) {
                 let offsetY = 0;
                 let imageUrl = '';
                 effects.forEach((effect) => {
-                    if (effect.type === 'DROP_SHADOW') {
-                        const dropShadow = effect;
-                        shadowColor = rgbToHex(dropShadow.color.r, dropShadow.color.g, dropShadow.color.b);
-                        shadowOpacity = Math.ceil(dropShadow.color.a * 100);
-                        offsetX = dropShadow.offset.x;
-                        offsetY = dropShadow.offset.y;
+                    if (effect.type === 'DROP_SHADOW' || effect.type === 'INNER_SHADOW') {
+                        const styleShadow = effect;
+                        shadowColor = rgbToHex(styleShadow.color.r, styleShadow.color.g, styleShadow.color.b);
+                        shadowOpacity = Math.ceil(styleShadow.color.a * 100);
+                        offsetX = styleShadow.offset.x;
+                        offsetY = styleShadow.offset.y;
                         shadow = { color: shadowColor, offsetX, offsetY, shadowOpacity };
                     }
                 });
-                let background = {};
                 const fillProp = fills;
                 for (const fill of fillProp) {
                     // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
                     if (fill.type === "IMAGE" && child.name.includes('img')) {
                         imageUrl = await exportObject(elem, "PNG");
                         type = 'img';
-                        background = {};
                         break;
                     }
                     if (child.name.includes('vector')) {
                         imageUrl = await exportObject(elem, "SVG");
                         break;
                     }
+                    rectangleProp = {
+                        type,
+                        filename: imageUrl,
+                        size: {
+                            width,
+                            height,
+                            x,
+                            y
+                        },
+                        style: { shadow, border }
+                    };
+                    layouts.push(rectangleProp);
                 }
-                rectangleProp = Object.assign(Object.assign({ type, filename: imageUrl, size: {
-                        width,
-                        height,
-                        x,
-                        y
-                    } }, (Object.keys(background).length > 0 && { background })), (Object.keys(border).length > 0 && Object.keys(shadow).length > 0 && { style: { border, shadow } }));
-                layouts.push(rectangleProp);
             }
         }
         return {
@@ -253,7 +266,7 @@ async function getStyles(select) {
     return;
 }
 // Основная функция, которая срабатывает при запуске плагина
-async function Flow() {
+async function Run() {
     const selectedNodes = figma.currentPage.selection;
     let exitData = [];
     for (const node of selectedNodes) {
@@ -262,11 +275,10 @@ async function Flow() {
         exitData.push(logoData);
     }
     // Отправляем готовый датасет на сервер 
-    console.log(exitData);
+    console.log(JSON.stringify(exitData), correctionName('logo - insta post - 1'));
     figma.showUI(__html__, { width: 300, height: 300 });
     figma.ui.postMessage(exitData);
-    // figma.closePlugin('Все данные успешно получены.')
+    // setTimeout(()=> figma.closePlugin('Все данные успешно получены.'), 5000)
 }
-//Запускаемые скрипты
-Flow();
-// getStyles()
+//Запуск плагина
+Run();
