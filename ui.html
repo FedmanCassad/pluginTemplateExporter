@@ -12,9 +12,12 @@
     const zip = new JSZip();
 
       // Добавляем каждый файл в ZIP-архив
+      let fileName = "files"
       files.forEach((file) => {
         const jsonData = JSON.stringify(file);
-        
+        if (files.length == 1) {
+          fileName = file.frameName
+        }  
         zip.file(`${file.frameName}.json`, jsonData);
       });
 
@@ -23,7 +26,8 @@
         const url = URL.createObjectURL(content);
         const link = document.createElement('a');
         link.href = url;
-        link.download = 'files.zip'; // Имя ZIP-файла
+        console.log(fileName)
+        link.download = `${fileName}.zip`; // Имя ZIP-файла
 
         // Добавляем ссылку на страницу и эмулируем нажатие
         document.body.appendChild(link);
