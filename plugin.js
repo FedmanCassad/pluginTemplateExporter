@@ -1,5 +1,9 @@
 "use strict";
 
+function delay(time) {
+    return new Promise((resolve) => setTimeout(resolve, time));
+}
+
 const identityMatrixHandlePositions = [
     [0, 1, 0],
     [0.5, 0.5, 1],
@@ -159,7 +163,6 @@ function applyMatrixToPoint(matrix, point) {
     const colors = [];
     const locations = [];
     let gradientData = null;
-console.log(fill)
     // извлекаем цвета и позиции
     for (const stop of fill.gradientStops) {
         colors.push(rgbToHex(stop.color.r, stop.color.g, stop.color.b));
@@ -201,7 +204,8 @@ async function getStyles(select) {
         || select && select.type === 'FRAME' && select.name.toLowerCase().includes('youtube')
         ) {
         let layouts = [];
-        select;
+        let rootAbsX = select.absoluteRenderBounds.x
+        let rootAbsY = select.absoluteRenderBounds.y
         const children = select.children;
         let frameName = correctionName(select.name);
         let category = decideCategory(frameName);
@@ -225,7 +229,7 @@ async function getStyles(select) {
         for (const child of children) {
             if (child.name.toLowerCase().includes('text')) {
                 const elem = child;
-                let { characters: text, width, height, x, y, fontSize: size, fills, strokes, strokeWeight, fontWeight: weight, fontName, letterSpacing: letSpace, lineHeight, effects, locked: isLocked, opacity, rotation, textAlignHorizontal: alignX, textAlignVertical: alignY } = elem;
+                let { characters: text, width, absoluteRenderBounds, paragraphSpacing, height, x, y, textCase, fontSize: size, fills, strokes, strokeWeight, fontWeight: weight, fontName, letterSpacing: letSpace, lineHeight, lineSpacing, effects, locked: isLocked, opacity, rotation, textAlignHorizontal: alignX, textAlignVertical: alignY } = elem;
                 const colorProp = fills;
                 let fontColor = '';
                 let stroke = null;
@@ -255,13 +259,14 @@ async function getStyles(select) {
                 let isStrikethrough = false;
                 if (elem.textDecoration === 'STRIKETHROUGH') {
                     isUnderline = false;
-                    isStroked = true;
+                    isStrikethrough = true;
                 }
                 if (elem.textDecoration === 'UNDERLINE') {
                     isUnderline = true;
-                    isStroked = false;
+                    isStrikethrough = false;
                 }
-
+                console.log('Line spacing')
+console.log(lineSpacing)
                 // if (isStroked == true) {
                    strokes.forEach((paint) => {
                     if (paint.type === "SOLID") {
@@ -278,6 +283,10 @@ async function getStyles(select) {
                 let offsetX = null;
                 let offsetY = null;
                 let shadowRadius = null;
+                let realWidth = absoluteRenderBounds.width
+                let realHeight = absoluteRenderBounds.height
+                let realXpos = absoluteRenderBounds.x - rootAbsX
+                let realYpos = absoluteRenderBounds.y - rootAbsY
                 let blur = null;
                 // значение блюра
                 effects.forEach((effect) => {
@@ -298,11 +307,12 @@ async function getStyles(select) {
                 const textInfo = {
                     text,
                     type,
+                    rotation,
                     size: {
-                        width,
-                        height,
-                        x,
-                        y,
+                        width: width,
+                        height: height,
+                        x: x,
+                        y: y,
                     },
                     style: {
                         font: {
@@ -314,14 +324,16 @@ async function getStyles(select) {
                             fontstyle: style,
                             color: fontColor ? fontColor : null,
                             stroke: stroke ? stroke : null,
+                            textCase: textCase
                         },
+                        lineSpacing,
                         letterSpacing: spacingProp,
-                        lineSpacing: lineHeightProp,
+                        lineHeight: lineHeightProp,
+                        paragraphSpaciing: paragraphSpacing,
                         blur: blurProp ? blurProp : null,
                         shadows: shadows ? shadows  : null,
                         isLocked,
                         opacity,
-                        rotation,
                         alignX,
                         alignY
                     }
@@ -331,9 +343,11 @@ async function getStyles(select) {
             ;
             if (child.name.toLowerCase().includes('vector')) {
                 const elem = child;
-                let { width, height, x, y, effects, strokes, strokeWeight } = elem;
+                let { absoluteRenderBounds, absoluteBoundingBox, width, height, x, y, effects, strokes, strokeWeight, rotation } = elem;
                 let groupProp = {};
                 const type = 'vector';
+                let absRenderHeight = absoluteRenderBounds.height
+                let absRenderWidth = absoluteRenderBounds.width
                 // Получаем данные о 
                 let border = null;
                 let colorStrokes = null;
@@ -376,15 +390,28 @@ async function getStyles(select) {
                     }
                 });
                 style = shadows || border || blur ? { shadow: shadows ? shadows : null, border: border ? border : null, blur: blur ? blur : null } : null;
-                const imageUrl = await exportObject(elem, "SVG");
+                let imageUrl = null;
+                let realXpos = absoluteBoundingBox.x - rootAbsX + (absoluteBoundingBox.width / 2)
+                let realYpos = absoluteBoundingBox.y - rootAbsY + (absoluteBoundingBox.height / 2)
+                if (absRenderHeight != height || absRenderWidth != width) {
+                    let copy = child.clone()
+                    copy.rotation = 0
+                    figma.currentPage.appendChild(copy)
+                   imageUrl = await exportObject(copy, "SVG");
+                   copy.remove()
+                } else {
+                    imageUrl = await exportObject(child, "SVG");
+                }
+
                 groupProp = {
                     type,
                     filename: imageUrl,
+                    rotation: rotation,
                     size: {
-                        width,
-                        height,
-                        x,
-                        y
+                        width: width,
+                        height: height,
+                        x: realXpos,
+                        y: realYpos
                     },
                     style: style ? style : null
                 };
@@ -458,13 +485,17 @@ async function getStyles(select) {
             // }
             if (child.name.includes('img')) {
                 const elem = child;
-                let { width, height, x, y, effects, fills, strokes, strokeWeight } = elem;
-                let type = '';
+                let { absoluteRenderBounds, absoluteBoundingBox, width, height, x, y, effects, fills, strokes, strokeWeight, rotation } = elem;
+                let type = "img";
                 let rectangleProp = {};
                 let border = null;
                 let colorStrokes;
                 let borderStyle;
                 let borderWeight;
+                let absRenderHeight = absoluteRenderBounds.height
+                let absRenderWidth = absoluteRenderBounds.width
+                let realXpos = absoluteBoundingBox.x - rootAbsX + (absoluteBoundingBox.width / 2)
+                let realYpos = absoluteBoundingBox.y - rootAbsY + (absoluteBoundingBox.height / 2)
                 strokes.forEach((paint) => {
                     if (paint.type === "SOLID") {
                         const solidPaint = paint;
@@ -501,34 +532,34 @@ async function getStyles(select) {
                 });
                 
                 style = shadows || border || blur ? { shadows: shadows ? shadows : null, border: border ? border : null, blur: blur ? blur : null } : null;
-                const fillProp = fills;
-                for (const fill of fillProp) {
-                    // Проверяем, что заливка изображением и узел имеет в названии "img"/"vector"
-                    if (fill.type == "IMAGE") {
-                        imageUrl = await exportObject(elem, "PNG");
-                        type = 'img';
-                        break;
-                    }
-                    if (elem.name.includes('vector')) {
-                        imageUrl = await exportObject(elem, "SVG");
-                        type = 'vector';
-                        break;
-                    }
+                if (absRenderHeight != height || absRenderWidth != width) {
+                    
+                    let tempRotation = rotation
+                    let copy = elem.clone()
+                    copy.rotation = 0
+                    elem.rotation = tempRotation
+                    figma.currentPage.appendChild(copy)
+                    imageUrl = await exportObject(copy, "PNG");
+                   copy.remove()
+                } else {
+                    imageUrl = await exportObject(elem, "PNG");
                 }
+
                 rectangleProp = {
                     type,
                     filename: imageUrl,
+                    rotation: rotation,
                     size: {
-                        width,
-                        height,
-                        x,
-                        y
+                        width: absRenderWidth,
+                        height: absRenderHeight,
+                        x: realXpos,
+                        y: realYpos
                     },
                     style: style ? style : null
                 };
                 layouts.push(rectangleProp);
             }
-
+            
         }
         return {
             frameName,
