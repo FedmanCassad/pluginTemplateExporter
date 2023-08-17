@@ -143,6 +143,16 @@ function decideCategory(name) {
         }
         if (name.toLowerCase().includes('poster')) {
             probableCategory = 'poster'
+        }
+        if (name.toLowerCase().includes('instagramstory')) {
+                probableCategory = 'instagramstory'
+            }
+        if (name.toLowerCase().includes('businesscard')) {
+                probableCategory = "businesscard"
+        }
+
+        if (name.toLowerCase().includes('invitation')) {
+            probableCategory = "invitation"
     }
      return probableCategory
  }
@@ -186,13 +196,15 @@ function applyMatrixToPoint(matrix, point) {
  }
 
  function decideTag(name) {
-    let knownParts = ['logo', 'insta', 'facebook', 'youtube', 'poster'];
+    let knownParts = ['logo', 'insta', 'facebook', 'youtube'];
     let nameParts = name.toLowerCase().split('-').map(part => part.trim());
     
     // Фильтруем массив nameParts, исключая элементы, которые входят в массив knownParts
     let tagParts = nameParts.filter(part => !knownParts.includes(part));
-    
+    console.log(tagParts)
     // Если остаются какие-то элементы после фильтрации, возвращаем первый, иначе возвращаем null
+    let tag = tagParts.length ? tagParts[0].trim() : null;
+    console.log(tag)
     return tagParts.length ? tagParts[0].trim() : null;
  }
 
@@ -202,6 +214,8 @@ async function getStyles(select) {
         || select && select.type === 'FRAME' && select.name.toLowerCase().includes('poster')
         || select && select.type === 'FRAME' && select.name.toLowerCase().includes('facebook')
         || select && select.type === 'FRAME' && select.name.toLowerCase().includes('youtube')
+        || select && select.type === 'FRAME' && select.name.toLowerCase().includes('business')
+        || select && select.type === 'FRAME' && select.name.toLowerCase().includes('invitation')
         ) {
         let layouts = [];
         let rootAbsX = select.absoluteRenderBounds.x
@@ -550,8 +564,8 @@ console.log(lineSpacing)
                     filename: imageUrl,
                     rotation: rotation,
                     size: {
-                        width: absRenderWidth,
-                        height: absRenderHeight,
+                        width: width,
+                        height: height,
                         x: realXpos,
                         y: realYpos
                     },
@@ -559,7 +573,7 @@ console.log(lineSpacing)
                 };
                 layouts.push(rectangleProp);
             }
-            
+
         }
         return {
             frameName,
