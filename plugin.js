@@ -309,8 +309,8 @@ console.log(lineSpacing)
                         shadowColor = rgbToHex(styleShadow.color.r, styleShadow.color.g, styleShadow.color.b);
                         shadowOpacity = Math.ceil(styleShadow.color.a * 100);
                         offsetX = styleShadow.offset.x;
-                        offsetY = styleShadow.offset.y;
-                        shadowRadius = styleShadow.radius;
+                        offsetY = syleShadow.offset.y;
+                        shadowRadius = styleShadow.radius / 2.5;
                         if (shadows === null) {
                             shadows = []
                         }
@@ -392,7 +392,7 @@ console.log(lineSpacing)
                         shadowOpacity = Math.ceil(styleShadow.color.a * 100);
                         offsetX = styleShadow.offset.x;
                         offsetY = styleShadow.offset.y;
-                        shadowRadius = styleShadow.radius;
+                        shadowRadius = styleShadow.radius / 2.5;
                         if (shadows == null) {
                             shadows = []
                         }
@@ -499,6 +499,7 @@ console.log(lineSpacing)
             // }
             if (child.name.includes('img')) {
                 const elem = child;
+                console.log(elem)
                 let { absoluteRenderBounds, absoluteBoundingBox, width, height, x, y, effects, fills, strokes, strokeWeight, rotation } = elem;
                 let type = "img";
                 let rectangleProp = {};
@@ -524,6 +525,7 @@ console.log(lineSpacing)
                 let shadowOpacity = 0;
                 let offsetX = 0;
                 let offsetY = 0;
+                let shadowRadius = null;
                 let imageUrl = '';
                 let blur = null;
                 let style = null;
@@ -534,10 +536,11 @@ console.log(lineSpacing)
                         shadowOpacity = Math.ceil(styleShadow.color.a * 100);
                         offsetX = styleShadow.offset.x;
                         offsetY = styleShadow.offset.y;
+                        shadowRadius = styleShadow.radius / 2.5;
                         if (shadows === null) {
                             shadows = []
                         }
-                        shadows.push({ color: shadowColor, offsetX, offsetY, shadowOpacity });
+                        shadows.push({ color: shadowColor, offsetX, offsetY, shadowOpacity, radius: shadowRadius });
                     }
                     if (effect.type === "LAYER_BLUR") {
                         const blurStyle = effect;
