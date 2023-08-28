@@ -383,6 +383,8 @@ console.log(lineSpacing)
                 let offsetX = null;
                 let offsetY = null;
                 let shadowRadius = null;
+                let realWidth = absoluteRenderBounds.width
+                let realHeight = absoluteRenderBounds.height
                 // значение блюра
                 let blur = null;
                 effects.forEach((effect) => {
@@ -422,8 +424,8 @@ console.log(lineSpacing)
                     filename: imageUrl,
                     rotation: rotation,
                     size: {
-                        width: width,
-                        height: height,
+                        width: realWidth,
+                        height: realHeight,
                         x: realXpos,
                         y: realYpos
                     },
