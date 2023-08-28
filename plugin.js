@@ -111,7 +111,7 @@ async function sendPostRequest(url, data) {
 }
 // Функция эскпорта изображений (зависит от названия в узле 'img'/ 'vector')
 async function exportObject(node, exportType) {
-    const exportOptions = { format: exportType }; // указываются параметры экспорта
+    const exportOptions = { format: exportType,  }; // указываются параметры экспорта
     const imageData = await node.exportAsync(exportOptions);
     const exportData = {
         size: {
@@ -359,6 +359,7 @@ console.log(lineSpacing)
                 const elem = child;
                 let { absoluteRenderBounds, absoluteBoundingBox, width, height, x, y, effects, strokes, strokeWeight, rotation } = elem;
                 let groupProp = {};
+                console.log(elem)
                 const type = 'vector';
                 let absRenderHeight = absoluteRenderBounds.height
                 let absRenderWidth = absoluteRenderBounds.width
@@ -410,9 +411,14 @@ console.log(lineSpacing)
                 let realXpos = absoluteBoundingBox.x - rootAbsX + (absoluteBoundingBox.width / 2)
                 let realYpos = absoluteBoundingBox.y - rootAbsY + (absoluteBoundingBox.height / 2)
                 if (absRenderHeight != height || absRenderWidth != width) {
-                    let copy = child.clone()
-                    copy.rotation = 0
+                    let copy = child.clone();
+                    copy.rotation = 0;
+                    let originalEffects = copy.effects;
+                    let newEffects = originalEffects.slice();
+                    newEffects = [];
+                    copy.effects = newEffects;
                     figma.currentPage.appendChild(copy)
+                
                    imageUrl = await exportObject(copy, "SVG");
                    copy.remove()
                 } else {
@@ -424,8 +430,8 @@ console.log(lineSpacing)
                     filename: imageUrl,
                     rotation: rotation,
                     size: {
-                        width: realWidth,
-                        height: realHeight,
+                        width: width,
+                        height: height,
                         x: realXpos,
                         y: realYpos
                     },
